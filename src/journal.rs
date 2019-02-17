@@ -2,6 +2,16 @@ use std::fs::File;
 
 pub const OBJECT_HEADER_SZ: u64 = 16;
 
+pub enum Object {
+    object(ObjectHeader),
+    data(DataObject),
+    field(FieldObject),
+    entry(EntryObject),
+    hash_table(HashTableObject),
+    entry_array(EntryArrayObject),
+    tag(TagObject),
+}
+
 #[derive(Debug, PartialEq)]
 #[repr(C)]
 pub enum ObjectType {
@@ -62,6 +72,14 @@ pub struct EntryObject {
     xor_hash: u64,
     items: Vec<EntryItem>,
 }
+
+#[repr(C, packed)]
+pub struct EntryArrayObject {
+    object: ObjectHeader,
+    next_entry_array_offset: u64,
+    items: Vec<u64>,
+}
+
 
 #[repr(C, packed)]
 pub struct HashItem {
