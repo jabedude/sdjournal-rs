@@ -1,17 +1,23 @@
 use std::fs::File;
 use std::mem;
 use byteorder::{BigEndian, LittleEndian, ReadBytesExt};
-use std::io::{Read, Result, Seek, SeekFrom};
+use std::io::{Read, Result, Error, ErrorKind, Seek, SeekFrom};
 
 pub mod journal;
 pub use crate::journal::*;
 
+pub fn is_valid64(u: u64) -> bool {
+    u & 7 == 0
+}
+
+fn align64(u: u64) -> u64 {
+    (u + 7u64) & !7u64
+}
+
 pub fn next_obj_offset(mut file: &File, obj_header: &ObjectHeader) -> Option<u64> {
-    let curr = file.seek(SeekFrom::Current(0));
-    match curr {
-        Ok(c) => Some(c + obj_header.size - OBJECT_HEADER_SZ),
-        Err(_) => None,
-    }
+    let curr = file.seek(SeekFrom::Current(0)).unwrap();
+    let offset = align64(curr + obj_header.size - OBJECT_HEADER_SZ);
+    Some(offset)
 }
 
 pub fn load_header(mut file: &File) -> Result<JournalHeader> {
@@ -81,7 +87,12 @@ pub fn load_header(mut file: &File) -> Result<JournalHeader> {
 }
 
 pub fn load_obj_header_at_offset(mut file: &File, offset: u64) -> Result<ObjectHeader> {
-    println!("offset: {}", offset);
+
+    if !is_valid64(offset) {
+        return Err(Error::new(ErrorKind::Other, "Invalid offset"));
+    }
+
+
     file.seek(SeekFrom::Start(offset));
     let type_ = file.read_u8()?;
     let type_ = match type_ {
@@ -160,8 +171,8 @@ impl Journal {
 
 impl<'a> ObjectHeaderIter<'a> {
     pub fn new(mut journal: &'a mut Journal) -> Result<ObjectHeaderIter> {
-        journal.file.seek(SeekFrom::Start(journal.header.field_hash_table_offset));
-        let offset = journal.header.field_hash_table_offset;
+        journal.file.seek(SeekFrom::Start(journal.header.field_hash_table_offset - OBJECT_HEADER_SZ));
+        let offset = journal.header.field_hash_table_offset - OBJECT_HEADER_SZ;
 
         Ok(ObjectHeaderIter {
             journal: journal,

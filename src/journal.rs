@@ -2,7 +2,7 @@ use std::fs::File;
 
 pub const OBJECT_HEADER_SZ: u64 = 16;
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 #[repr(C)]
 pub enum ObjectType {
     OBJECT_UNUSED = 0,
