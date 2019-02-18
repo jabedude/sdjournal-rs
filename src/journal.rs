@@ -13,7 +13,6 @@ pub enum Object {
 }
 
 #[derive(Debug, PartialEq)]
-#[repr(C)]
 pub enum ObjectType {
     OBJECT_UNUSED = 0,
     OBJECT_DATA = 1,
@@ -26,82 +25,70 @@ pub enum ObjectType {
     _OBJECT_TYPE_MAX
 }
 
-#[repr(C, packed)]
 pub struct ObjectHeader {
     pub type_: ObjectType,
     pub flags: u8,
     pub reserved: [u8; 6],
     pub size: u64,
+}
+
+pub struct DataObject {
+    pub object: ObjectHeader,
+    pub hash: u64,
+    pub next_hash_offset: u64,
+    pub next_field_offset: u64,
+    pub entry_offset: u64,
+    pub entry_array_offset: u64,
+    pub n_entries: u64,
     pub payload: Vec<u8>,
 }
 
-#[repr(C, packed)]
-pub struct DataObject {
-    object: ObjectHeader,
-    hash: u64,
-    next_hash_offset: u64,
-    next_field_offset: u64,
-    entry_offset: u64,
-    entry_array_offset: u64,
-    n_entries: u64,
-    payload: Vec<u8>,
-}
-
-#[repr(C, packed)]
 pub struct FieldObject {
-    object: ObjectHeader,
-    hash: u64,
-    next_hash_offset: u64,
-    head_data_offset: u64,
-    payload: Vec<u8>,
+    pub object: ObjectHeader,
+    pub hash: u64,
+    pub next_hash_offset: u64,
+    pub head_data_offset: u64,
+    pub payload: Vec<u8>,
 }
 
-#[repr(C, packed)]
 pub struct EntryItem {
-    object_offset: u64,
-    hash: u64,
+    pub object_offset: u64,
+    pub hash: u64,
 }
 
-#[repr(C, packed)]
 pub struct EntryObject {
-    object: ObjectHeader,
-    seqnum: u64,
-    realtime: u64,
-    monotonic: u64,
-    boot_id: sd_id128,
-    xor_hash: u64,
-    items: Vec<EntryItem>,
+    pub object: ObjectHeader,
+    pub seqnum: u64,
+    pub realtime: u64,
+    pub monotonic: u64,
+    pub boot_id: sd_id128,
+    pub xor_hash: u64,
+    pub items: Vec<EntryItem>,
 }
 
-#[repr(C, packed)]
 pub struct EntryArrayObject {
-    object: ObjectHeader,
-    next_entry_array_offset: u64,
-    items: Vec<u64>,
+    pub object: ObjectHeader,
+    pub next_entry_array_offset: u64,
+    pub items: Vec<u64>,
 }
 
-
-#[repr(C, packed)]
 pub struct HashItem {
-    hash_head_offset: u64,
-    tail_hash_offset: u64,
+    pub hash_head_offset: u64,
+    pub tail_hash_offset: u64,
 }
 
-#[repr(C, packed)]
 pub struct HashTableObject {
-    object: ObjectHeader,
-    items: Vec<HashItem>,
+    pub object: ObjectHeader,
+    pub items: Vec<HashItem>,
 }
 
-#[repr(C, packed)]
 pub struct TagObject {
-    object: ObjectHeader,
-    seqnum: u64,
-    epoch: u64,
-    tag: [u8; 256/8], /* SHA-256 HMAC */
+    pub object: ObjectHeader,
+    pub seqnum: u64,
+    pub epoch: u64,
+    pub tag: [u8; 256/8], /* SHA-256 HMAC */
 }
 
-#[repr(C, packed)]
 pub union sd_id128 {
     pub bytes: [u8; 16],
     pub qwords: [u64; 2],

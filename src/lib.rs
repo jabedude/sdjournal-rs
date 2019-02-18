@@ -1,3 +1,4 @@
+#![feature(untagged_unions)]
 use std::fs::File;
 use std::mem;
 use byteorder::{BigEndian, LittleEndian, ReadBytesExt};
@@ -6,7 +7,7 @@ use std::io::{Read, Result, Error, ErrorKind, Seek, SeekFrom};
 pub mod journal;
 pub use crate::journal::*;
 
-pub fn is_valid64(u: u64) -> bool {
+fn is_valid64(u: u64) -> bool {
     u & 7 == 0
 }
 
@@ -93,7 +94,7 @@ pub fn load_obj_header_at_offset(mut file: &File, offset: u64) -> Result<ObjectH
     }
 
 
-    file.seek(SeekFrom::Start(offset));
+    file.seek(SeekFrom::Start(offset))?;
     let type_ = file.read_u8()?;
     let type_ = match type_ {
         0 => ObjectType::OBJECT_UNUSED,
@@ -112,16 +113,111 @@ pub fn load_obj_header_at_offset(mut file: &File, offset: u64) -> Result<ObjectH
     let mut reserved = [0u8; 6];
     file.read_exact(&mut reserved)?;
     let size = file.read_u64::<LittleEndian>()?;
-    let mut payload: Vec<u8> = vec![0u8; 8];
-    //file.read_exact(&mut payload)?;
 
     Ok(ObjectHeader{
         type_: type_,
         flags: flags,
         reserved: reserved,
         size: size,
-        payload: payload,
     })
+}
+
+pub fn load_obj_at_offset(mut file: &File, offset: u64) -> Result<Object> {
+
+    if !is_valid64(offset) {
+        return Err(Error::new(ErrorKind::Other, "Invalid offset"));
+    }
+
+    file.seek(SeekFrom::Start(offset))?;
+    let type_ = file.read_u8()?;
+    match type_ {
+        0 => return Err(Error::new(ErrorKind::Other, "Unused Object")),
+        1 => {
+            let flags = file.read_u8()?;
+            let mut reserved = [0u8; 6];
+            file.read_exact(&mut reserved)?;
+            let size = file.read_u64::<LittleEndian>()?;
+            return Ok(Object::object(ObjectHeader{
+                type_: ObjectType::OBJECT_DATA,
+                flags: flags,
+                reserved: reserved,
+                size: size,
+            }));
+        },
+        2 => {
+            let flags = file.read_u8()?;
+            let mut reserved = [0u8; 6];
+            file.read_exact(&mut reserved)?;
+            let size = file.read_u64::<LittleEndian>()?;
+            return Ok(Object::object(ObjectHeader{
+                type_: ObjectType::OBJECT_FIELD,
+                flags: flags,
+                reserved: reserved,
+                size: size,
+            }));
+        },
+        3 => {
+            let flags = file.read_u8()?;
+            let mut reserved = [0u8; 6];
+            file.read_exact(&mut reserved)?;
+            let size = file.read_u64::<LittleEndian>()?;
+            return Ok(Object::object(ObjectHeader{
+                type_: ObjectType::OBJECT_ENTRY,
+                flags: flags,
+                reserved: reserved,
+                size: size,
+            }));
+        },
+        4 => {
+            let flags = file.read_u8()?;
+            let mut reserved = [0u8; 6];
+            file.read_exact(&mut reserved)?;
+            let size = file.read_u64::<LittleEndian>()?;
+            return Ok(Object::object(ObjectHeader{
+                type_: ObjectType::OBJECT_DATA_HASH_TABLE,
+                flags: flags,
+                reserved: reserved,
+                size: size,
+            }));
+        },
+        5 => {
+            let flags = file.read_u8()?;
+            let mut reserved = [0u8; 6];
+            file.read_exact(&mut reserved)?;
+            let size = file.read_u64::<LittleEndian>()?;
+            return Ok(Object::object(ObjectHeader{
+                type_: ObjectType::OBJECT_FIELD_HASH_TABLE,
+                flags: flags,
+                reserved: reserved,
+                size: size,
+            }));
+        },
+        6 => {
+            let flags = file.read_u8()?;
+            let mut reserved = [0u8; 6];
+            file.read_exact(&mut reserved)?;
+            let size = file.read_u64::<LittleEndian>()?;
+            return Ok(Object::object(ObjectHeader{
+                type_: ObjectType::OBJECT_ENTRY_ARRAY,
+                flags: flags,
+                reserved: reserved,
+                size: size,
+            }));
+        },
+        7 => {
+            let flags = file.read_u8()?;
+            let mut reserved = [0u8; 6];
+            file.read_exact(&mut reserved)?;
+            let size = file.read_u64::<LittleEndian>()?;
+            return Ok(Object::object(ObjectHeader{
+                type_: ObjectType::OBJECT_TAG,
+                flags: flags,
+                reserved: reserved,
+                size: size,
+            }));
+        },
+        _ => return Err(Error::new(ErrorKind::Other, "Unused MAX Object")),
+    };
 }
 
 pub fn load_object_header(mut file: &File) -> Result<ObjectHeader> {
@@ -143,17 +239,12 @@ pub fn load_object_header(mut file: &File) -> Result<ObjectHeader> {
     let mut reserved = [0u8; 6];
     file.read_exact(&mut reserved)?;
     let size = file.read_u64::<LittleEndian>()?;
-    let struct_size = mem::size_of::<ObjectHeader>() as u64;
-    println!("s {} size {} to read ", struct_size, size);
-    let mut payload: Vec<u8> = vec![0u8; size as usize];
-    file.read_exact(&mut payload)?;
 
     Ok(ObjectHeader{
         type_: type_,
         flags: flags,
         reserved: reserved,
         size: size,
-        payload: payload,
     })
 }
 
@@ -171,7 +262,7 @@ impl Journal {
 
 impl<'a> ObjectHeaderIter<'a> {
     pub fn new(mut journal: &'a mut Journal) -> Result<ObjectHeaderIter> {
-        journal.file.seek(SeekFrom::Start(journal.header.field_hash_table_offset - OBJECT_HEADER_SZ));
+        journal.file.seek(SeekFrom::Start(journal.header.field_hash_table_offset - OBJECT_HEADER_SZ))?;
         let offset = journal.header.field_hash_table_offset - OBJECT_HEADER_SZ;
 
         Ok(ObjectHeaderIter {

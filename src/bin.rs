@@ -1,7 +1,5 @@
 use journald::*;
 use std::env;
-use std::mem;
-use std::io::{Read, Seek, SeekFrom};
 
 
 fn main() {
