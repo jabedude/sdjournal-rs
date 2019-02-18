@@ -137,12 +137,32 @@ pub fn load_obj_at_offset(mut file: &File, offset: u64) -> Result<Object> {
             let mut reserved = [0u8; 6];
             file.read_exact(&mut reserved)?;
             let size = file.read_u64::<LittleEndian>()?;
-            return Ok(Object::object(ObjectHeader{
+            let obj_header = ObjectHeader {
                 type_: ObjectType::OBJECT_DATA,
                 flags: flags,
                 reserved: reserved,
                 size: size,
-            }));
+            };
+            let hash = file.read_u64::<LittleEndian>()?;
+            let next_hash_offset = file.read_u64::<LittleEndian>()?;
+            let next_field_offset = file.read_u64::<LittleEndian>()?;
+            let entry_offset = file.read_u64::<LittleEndian>()?;
+            let entry_array_offset = file.read_u64::<LittleEndian>()?;
+            let n_entries = file.read_u64::<LittleEndian>()?;
+            let mut payload: Vec<u8> = vec![0u8; (size - 48) as usize];
+            file.read_exact(&mut payload)?;
+            
+            let data_object = DataObject {
+                object: obj_header,
+                hash: hash,
+                next_hash_offset: next_hash_offset,
+                next_field_offset: next_field_offset,
+                entry_offset: entry_offset,
+                entry_array_offset: entry_array_offset,
+                n_entries: n_entries,
+                payload: payload,
+            };
+            return Ok(Object::data(data_object));
         },
         2 => {
             let flags = file.read_u8()?;
@@ -217,7 +237,7 @@ pub fn load_obj_at_offset(mut file: &File, offset: u64) -> Result<Object> {
             }));
         },
         _ => return Err(Error::new(ErrorKind::Other, "Unused MAX Object")),
-    };
+    }
 }
 
 impl Journal {
@@ -239,6 +259,7 @@ impl<'a> ObjectHeaderIter<'a> {
 
         Ok(ObjectHeaderIter {
             journal: journal,
+            current_offset: offset,
             next_offset: offset,
         })
     }
@@ -246,6 +267,7 @@ impl<'a> ObjectHeaderIter<'a> {
 
 pub struct ObjectHeaderIter<'a> {
     journal: &'a Journal,
+    pub current_offset: u64,
     next_offset: u64,
 }
 
@@ -254,6 +276,7 @@ impl<'a> Iterator for ObjectHeaderIter<'a> {
 
     fn next(&mut self) -> Option<ObjectHeader> {
         let header = load_obj_header_at_offset(&self.journal.file, self.next_offset);
+        self.current_offset = self.next_offset;
         match header {
             Ok(h) => {
                 self.next_offset = next_obj_offset(&self.journal.file, &h)?;

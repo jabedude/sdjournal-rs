@@ -1,6 +1,7 @@
 use std::fs::File;
 
 pub const OBJECT_HEADER_SZ: u64 = 16;
+pub const DATA_OBJECT_HEADER_SZ: u64 = 48;
 
 pub enum Object {
     object(ObjectHeader),
