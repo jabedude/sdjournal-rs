@@ -220,34 +220,6 @@ pub fn load_obj_at_offset(mut file: &File, offset: u64) -> Result<Object> {
     };
 }
 
-pub fn load_object_header(mut file: &File) -> Result<ObjectHeader> {
-    let type_ = file.read_u8()?;
-    let type_ = match type_ {
-        0 => ObjectType::OBJECT_UNUSED,
-        1 => ObjectType::OBJECT_DATA,
-        2 => ObjectType::OBJECT_FIELD,
-        3 => ObjectType::OBJECT_ENTRY,
-        4 => ObjectType::OBJECT_DATA_HASH_TABLE,
-        5 => ObjectType::OBJECT_FIELD_HASH_TABLE,
-        6 => ObjectType::OBJECT_ENTRY_ARRAY,
-        7 => ObjectType::OBJECT_TAG,
-        _ => ObjectType::_OBJECT_TYPE_MAX
-    };
-
-
-    let flags = file.read_u8()?;
-    let mut reserved = [0u8; 6];
-    file.read_exact(&mut reserved)?;
-    let size = file.read_u64::<LittleEndian>()?;
-
-    Ok(ObjectHeader{
-        type_: type_,
-        flags: flags,
-        reserved: reserved,
-        size: size,
-    })
-}
-
 impl Journal {
     pub fn new(path: &str) -> Result<Journal> {
         let mut file = File::open(path)?;
