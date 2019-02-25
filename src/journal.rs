@@ -2,6 +2,13 @@ use std::fs::File;
 
 pub const OBJECT_HEADER_SZ: u64 = 16;
 pub const DATA_OBJECT_HEADER_SZ: u64 = 48;
+pub const FIELD_OBJECT_HEADER_SZ: u64 = 24;
+
+/// This trait guarantees an object that implements it can return it's
+/// own size.
+pub trait SizedObject {
+    fn size(&self) -> u64;
+}
 
 pub enum Object {
     object(ObjectHeader),
@@ -11,6 +18,20 @@ pub enum Object {
     hash_table(HashTableObject),
     entry_array(EntryArrayObject),
     tag(TagObject),
+}
+
+impl SizedObject for Object {
+    fn size(&self) -> u64 {
+        match self {
+            Object::object(o) => return o.size,
+            Object::data(d) => return d.object.size,
+            Object::field(f) => return f.object.size,
+            Object::entry(e) => return e.object.size,
+            Object::hash_table(ht) => return ht.object.size,
+            Object::entry_array(ea) => return ea.object.size,
+            Object::tag(t) => return t.object.size,
+        }
+    }
 }
 
 #[derive(Debug, PartialEq)]
@@ -31,6 +52,12 @@ pub struct ObjectHeader {
     pub flags: u8,
     pub reserved: [u8; 6],
     pub size: u64,
+}
+
+impl SizedObject for ObjectHeader {
+    fn size(&self) -> u64 {
+        self.size
+    }
 }
 
 pub struct DataObject {
@@ -62,7 +89,7 @@ pub struct EntryObject {
     pub seqnum: u64,
     pub realtime: u64,
     pub monotonic: u64,
-    pub boot_id: sd_id128,
+    pub boot_id: u128,
     pub xor_hash: u64,
     pub items: Vec<EntryItem>,
 }
@@ -90,7 +117,7 @@ pub struct TagObject {
     pub tag: [u8; 256/8], /* SHA-256 HMAC */
 }
 
-pub union sd_id128 {
+pub union SdId128 {
     pub bytes: [u8; 16],
     pub qwords: [u64; 2],
 }
