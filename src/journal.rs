@@ -158,6 +158,6 @@ pub struct JournalHeader {
 }
 
 pub struct Journal<'a> {
-    pub file: &'a mut Cursor<&'a [u8]>,
+    pub file: Cursor<&'a [u8]>,
     pub header: JournalHeader,
 }

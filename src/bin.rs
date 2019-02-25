@@ -24,13 +24,12 @@ fn main() {
     let mmap = unsafe { Mmap::map(&file).expect("mmap err") };
     let buf = &*mmap;
     let mut cur = Cursor::new(buf);
-    let mut journal = Journal::new(&mut cur).unwrap();
+    let mut journal = Journal::new(cur).unwrap();
     
     let obj_iter = ObjectIter::new(&mut journal).unwrap();
     for obj in obj_iter {
-        if let Object::Data(d) = obj {
-            println!("type: {:?} size: {}", d.object.type_, d.object.size);
-            println!("Payload: {:?}", show(&d.payload));
+        if let Object::Entry(e) = obj {
+            println!("entry object time: {}", e.realtime);
         }
     }
 

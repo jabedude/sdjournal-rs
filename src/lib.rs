@@ -93,7 +93,7 @@ pub fn load_header(mut file: &mut Cursor<&[u8]>) -> Result<JournalHeader> {
     })
 }
 
-pub fn load_obj_header_at_offset(mut file: &mut Cursor<&[u8]>, offset: u64) -> Result<ObjectHeader> {
+pub fn load_obj_header_at_offset(file: &mut Cursor<&[u8]>, offset: u64) -> Result<ObjectHeader> {
 
     if !is_valid64(offset) {
         return Err(Error::new(ErrorKind::Other, "Invalid offset"));
@@ -128,7 +128,7 @@ pub fn load_obj_header_at_offset(mut file: &mut Cursor<&[u8]>, offset: u64) -> R
     })
 }
 
-pub fn load_obj_at_offset(mut file: &mut Cursor<&[u8]>, offset: u64) -> Result<Object> {
+pub fn load_obj_at_offset(file: &mut Cursor<&[u8]>, offset: u64) -> Result<Object> {
 
     if !is_valid64(offset) {
         return Err(Error::new(ErrorKind::Other, "Invalid offset"));
@@ -339,7 +339,7 @@ pub fn load_obj_at_offset(mut file: &mut Cursor<&[u8]>, offset: u64) -> Result<O
 }
 
 impl<'a> Journal<'a> {
-    pub fn new(mut path: &'a mut Cursor<&'a [u8]>) -> Result<Journal<'a>> {
+    pub fn new(mut path: Cursor<&'a [u8]>) -> Result<Journal<'a>> {
         //TODO: mmap file
         let header = load_header(&mut path)?;
 
@@ -373,11 +373,11 @@ impl<'a> Iterator for ObjectHeaderIter<'a> {
     type Item = ObjectHeader;
 
     fn next(&mut self) -> Option<ObjectHeader> {
-        let header = load_obj_header_at_offset(self.journal.file, self.next_offset);
+        let header = load_obj_header_at_offset(&mut self.journal.file, self.next_offset);
         self.current_offset = self.next_offset;
         match header {
             Ok(h) => {
-                self.next_offset = next_obj_header_offset(self.journal.file, &h)?;
+                self.next_offset = next_obj_header_offset(&mut self.journal.file, &h)?;
                 return Some(h);
             },
             Err(_) => return None,
@@ -408,12 +408,12 @@ impl<'a> Iterator for ObjectIter<'a> {
     type Item = Object;
 
     fn next(&mut self) -> Option<Object> {
-        let object = load_obj_at_offset(self.journal.file, self.next_offset);
+        let object = load_obj_at_offset(&mut self.journal.file, self.next_offset);
         self.current_offset = self.next_offset;
         self.journal.file.seek(SeekFrom::Start(self.current_offset)).unwrap();
         match object {
             Ok(o) => {
-                self.next_offset = next_obj_offset(self.journal.file, &o)?;
+                self.next_offset = next_obj_offset(&mut self.journal.file, &o)?;
                 return Some(o);
             },
             Err(_) => {
