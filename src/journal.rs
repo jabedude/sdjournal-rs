@@ -1,5 +1,8 @@
 use std::fs::File;
 
+// TODO: time to string
+// TODO: jenkins hash: https://en.wikipedia.org/wiki/Jenkins_hash_function
+
 pub const OBJECT_HEADER_SZ: u64 = 16;
 pub const DATA_OBJECT_HEADER_SZ: u64 = 48;
 pub const FIELD_OBJECT_HEADER_SZ: u64 = 24;
@@ -79,6 +82,7 @@ pub struct FieldObject {
     pub payload: Vec<u8>,
 }
 
+#[derive(Debug, PartialEq)]
 pub struct EntryItem {
     pub object_offset: u64,
     pub hash: u64,

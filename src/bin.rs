@@ -20,9 +20,11 @@ fn main() {
     
     let obj_iter = ObjectIter::new(&mut journal).unwrap();
     for obj in obj_iter {
-        if let Object::Data(d) = obj {
-            println!("type: {:?} size: {}", d.object.type_, d.object.size);
-            println!("Payload: {:?}", show(&d.payload));
+        if let Object::Entry(e) = obj {
+            println!("Entry time: {}", e.realtime);
+            for entry in e.items {
+                println!("entry: {:?}", entry);
+            }
         }
     }
 

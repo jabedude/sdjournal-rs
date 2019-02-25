@@ -26,7 +26,7 @@ fn next_obj_header_offset<T: SizedObject>(mut file: &File, obj: &T) -> Option<u6
     Some(offset)
 }
 
-pub fn load_header(mut file: &File) -> Result<JournalHeader> {
+fn load_header(mut file: &File) -> Result<JournalHeader> {
     let mut signature = [0u8; 8];
     file.read_exact(&mut signature)?;
     let compatible_flags = file.read_u32::<LittleEndian>()?;
@@ -92,7 +92,7 @@ pub fn load_header(mut file: &File) -> Result<JournalHeader> {
     })
 }
 
-pub fn load_obj_header_at_offset(mut file: &File, offset: u64) -> Result<ObjectHeader> {
+fn load_obj_header_at_offset(mut file: &File, offset: u64) -> Result<ObjectHeader> {
 
     if !is_valid64(offset) {
         return Err(Error::new(ErrorKind::Other, "Invalid offset"));
