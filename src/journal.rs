@@ -11,40 +11,40 @@ pub trait SizedObject {
 }
 
 pub enum Object {
-    object(ObjectHeader),
-    data(DataObject),
-    field(FieldObject),
-    entry(EntryObject),
-    hash_table(HashTableObject),
-    entry_array(EntryArrayObject),
-    tag(TagObject),
+    Object(ObjectHeader),
+    Data(DataObject),
+    Field(FieldObject),
+    Entry(EntryObject),
+    HashTable(HashTableObject),
+    EntryArray(EntryArrayObject),
+    Tag(TagObject),
 }
 
 impl SizedObject for Object {
     fn size(&self) -> u64 {
         match self {
-            Object::object(o) => return o.size,
-            Object::data(d) => return d.object.size,
-            Object::field(f) => return f.object.size,
-            Object::entry(e) => return e.object.size,
-            Object::hash_table(ht) => return ht.object.size,
-            Object::entry_array(ea) => return ea.object.size,
-            Object::tag(t) => return t.object.size,
+            Object::Object(o) => return o.size,
+            Object::Data(d) => return d.object.size,
+            Object::Field(f) => return f.object.size,
+            Object::Entry(e) => return e.object.size,
+            Object::HashTable(ht) => return ht.object.size,
+            Object::EntryArray(ea) => return ea.object.size,
+            Object::Tag(t) => return t.object.size,
         }
     }
 }
 
 #[derive(Debug, PartialEq)]
 pub enum ObjectType {
-    OBJECT_UNUSED = 0,
-    OBJECT_DATA = 1,
-    OBJECT_FIELD = 2,
-    OBJECT_ENTRY = 3,
-    OBJECT_DATA_HASH_TABLE = 4,
-    OBJECT_FIELD_HASH_TABLE = 5,
-    OBJECT_ENTRY_ARRAY = 6,
-    OBJECT_TAG = 7,
-    _OBJECT_TYPE_MAX
+    ObjectUnused = 0,
+    ObjectData = 1,
+    ObjectField = 2,
+    ObjectEntry = 3,
+    ObjectDataHashTable = 4,
+    ObjectFieldHashTable = 5,
+    ObjectEntryArray = 6,
+    ObjectTag = 7,
+    ObjectTypeMax
 }
 
 pub struct ObjectHeader {
