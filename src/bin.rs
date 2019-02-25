@@ -9,8 +9,7 @@ fn main() {
     let n_entries = journal.header.n_objects;
 
     let mut obj_iter = ObjectIter::new(&mut journal).unwrap();
-    for _ in 0..n_entries {
-        let obj = obj_iter.next().expect("object iterator error");
+    for obj in obj_iter {
         if let Object::data(d) = obj {
             println!("type: {:?} size: {}", d.object.type_, d.object.size);
             println!("Payload: {:?}", d.payload);

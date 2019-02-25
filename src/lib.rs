@@ -389,7 +389,6 @@ impl<'a> Iterator for ObjectIter<'a> {
                 return Some(o);
             },
             Err(e) => {
-                println!("error: {:?}", e);
                 return None;
             }
         }
