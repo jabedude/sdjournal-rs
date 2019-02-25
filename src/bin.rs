@@ -1,5 +1,8 @@
 use journald::*;
 use std::env;
+use std::fs::File;
+use std::io::Cursor;
+use memmap::Mmap;
 
 use std::ascii::escape_default;
 use std::str;
@@ -16,7 +19,12 @@ fn show(bs: &[u8]) -> String {
 
 fn main() {
     let args: Vec<String> = env::args().collect();
-    let mut journal = Journal::new(&args[1]).unwrap();
+
+    let mut file = File::open(&args[1]).unwrap();
+    let mmap = unsafe { Mmap::map(&file).expect("mmap err") };
+    let buf = &*mmap;
+    let mut cur = Cursor::new(buf);
+    let mut journal = Journal::new(&mut cur).unwrap();
     
     let obj_iter = ObjectIter::new(&mut journal).unwrap();
     for obj in obj_iter {

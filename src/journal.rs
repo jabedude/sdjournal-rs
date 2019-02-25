@@ -1,4 +1,5 @@
 use std::fs::File;
+use std::io::Cursor;
 
 pub const OBJECT_HEADER_SZ: u64 = 16;
 pub const DATA_OBJECT_HEADER_SZ: u64 = 48;
@@ -156,7 +157,7 @@ pub struct JournalHeader {
     pub n_entry_arrays: u64,
 }
 
-pub struct Journal {
-    pub file: File,
+pub struct Journal<'a> {
+    pub file: &'a mut Cursor<&'a [u8]>,
     pub header: JournalHeader,
 }

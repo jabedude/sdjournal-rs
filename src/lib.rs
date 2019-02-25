@@ -1,5 +1,6 @@
 #![feature(untagged_unions)]
 use std::fs::File;
+use std::io::Cursor;
 use byteorder::{LittleEndian, ReadBytesExt};
 use std::io::{Read, Result, Error, ErrorKind, Seek, SeekFrom};
 
@@ -14,19 +15,19 @@ fn align64(u: u64) -> u64 {
     (u + 7u64) & !7u64
 }
 
-fn next_obj_offset<T: SizedObject>(mut file: &File, obj: &T) -> Option<u64> {
+fn next_obj_offset<T: SizedObject>(mut file: &mut Cursor<&[u8]>, obj: &T) -> Option<u64> {
     let curr = file.seek(SeekFrom::Current(0)).unwrap();
     let offset = align64(curr + obj.size());
     Some(offset)
 }
 
-fn next_obj_header_offset<T: SizedObject>(mut file: &File, obj: &T) -> Option<u64> {
+fn next_obj_header_offset<T: SizedObject>(mut file: &mut Cursor<&[u8]>, obj: &T) -> Option<u64> {
     let curr = file.seek(SeekFrom::Current(0)).unwrap();
     let offset = align64(curr + obj.size() - OBJECT_HEADER_SZ);
     Some(offset)
 }
 
-pub fn load_header(mut file: &File) -> Result<JournalHeader> {
+pub fn load_header(mut file: &mut Cursor<&[u8]>) -> Result<JournalHeader> {
     let mut signature = [0u8; 8];
     file.read_exact(&mut signature)?;
     let compatible_flags = file.read_u32::<LittleEndian>()?;
@@ -92,7 +93,7 @@ pub fn load_header(mut file: &File) -> Result<JournalHeader> {
     })
 }
 
-pub fn load_obj_header_at_offset(mut file: &File, offset: u64) -> Result<ObjectHeader> {
+pub fn load_obj_header_at_offset(mut file: &mut Cursor<&[u8]>, offset: u64) -> Result<ObjectHeader> {
 
     if !is_valid64(offset) {
         return Err(Error::new(ErrorKind::Other, "Invalid offset"));
@@ -127,7 +128,7 @@ pub fn load_obj_header_at_offset(mut file: &File, offset: u64) -> Result<ObjectH
     })
 }
 
-pub fn load_obj_at_offset(mut file: &File, offset: u64) -> Result<Object> {
+pub fn load_obj_at_offset(mut file: &mut Cursor<&[u8]>, offset: u64) -> Result<Object> {
 
     if !is_valid64(offset) {
         return Err(Error::new(ErrorKind::Other, "Invalid offset"));
@@ -337,20 +338,20 @@ pub fn load_obj_at_offset(mut file: &File, offset: u64) -> Result<Object> {
     }
 }
 
-impl Journal {
-    pub fn new(path: &str) -> Result<Journal> {
-        let mut file = File::open(path)?;
-        let header = load_header(&mut file)?;
+impl<'a> Journal<'a> {
+    pub fn new(mut path: &'a mut Cursor<&'a [u8]>) -> Result<Journal<'a>> {
+        //TODO: mmap file
+        let header = load_header(&mut path)?;
 
         Ok(Journal{
-            file: file,
+            file: path,
             header: header,
         })
     }
 }
 
 impl<'a> ObjectHeaderIter<'a> {
-    pub fn new(journal: &'a mut Journal) -> Result<ObjectHeaderIter> {
+    pub fn new(journal: &'a mut Journal<'a>) -> Result<ObjectHeaderIter<'a>> {
         journal.file.seek(SeekFrom::Start(journal.header.field_hash_table_offset - OBJECT_HEADER_SZ))?;
         let offset = journal.header.field_hash_table_offset - OBJECT_HEADER_SZ;
 
@@ -363,7 +364,7 @@ impl<'a> ObjectHeaderIter<'a> {
 }
 
 pub struct ObjectHeaderIter<'a> {
-    journal: &'a Journal,
+    journal: &'a mut Journal<'a>,
     pub current_offset: u64,
     next_offset: u64,
 }
@@ -372,11 +373,11 @@ impl<'a> Iterator for ObjectHeaderIter<'a> {
     type Item = ObjectHeader;
 
     fn next(&mut self) -> Option<ObjectHeader> {
-        let header = load_obj_header_at_offset(&self.journal.file, self.next_offset);
+        let header = load_obj_header_at_offset(self.journal.file, self.next_offset);
         self.current_offset = self.next_offset;
         match header {
             Ok(h) => {
-                self.next_offset = next_obj_header_offset(&self.journal.file, &h)?;
+                self.next_offset = next_obj_header_offset(self.journal.file, &h)?;
                 return Some(h);
             },
             Err(_) => return None,
@@ -385,7 +386,7 @@ impl<'a> Iterator for ObjectHeaderIter<'a> {
 }
 
 impl<'a> ObjectIter<'a> {
-    pub fn new(journal: &'a mut Journal) -> Result<ObjectIter> {
+    pub fn new(journal: &'a mut Journal<'a>) -> Result<ObjectIter<'a>> {
         journal.file.seek(SeekFrom::Start(journal.header.field_hash_table_offset - OBJECT_HEADER_SZ))?;
         let offset = journal.header.field_hash_table_offset - OBJECT_HEADER_SZ;
 
@@ -398,7 +399,7 @@ impl<'a> ObjectIter<'a> {
 }
 
 pub struct ObjectIter<'a> {
-    journal: &'a mut Journal,
+    journal: &'a mut Journal<'a>,
     pub current_offset: u64,
     next_offset: u64,
 }
@@ -407,12 +408,12 @@ impl<'a> Iterator for ObjectIter<'a> {
     type Item = Object;
 
     fn next(&mut self) -> Option<Object> {
-        let object = load_obj_at_offset(&self.journal.file, self.next_offset);
+        let object = load_obj_at_offset(self.journal.file, self.next_offset);
         self.current_offset = self.next_offset;
         self.journal.file.seek(SeekFrom::Start(self.current_offset)).unwrap();
         match object {
             Ok(o) => {
-                self.next_offset = next_obj_offset(&self.journal.file, &o)?;
+                self.next_offset = next_obj_offset(self.journal.file, &o)?;
                 return Some(o);
             },
             Err(_) => {
