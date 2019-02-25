@@ -1,16 +1,27 @@
-use std::fs::File;
+#![feature(test)]
+extern crate test;
 
+#[cfg(test)]
+mod tests {
 use journald::*;
+use test::Bencher;
 
-#[test]
-fn test_load_header() {
-    let journal = File::open("tests/user-1000.journal").unwrap();
-    let _h = load_header(&journal).unwrap();
-}
+    #[test]
+    fn test_object_iter_user() {
 
-#[test]
-fn test_calc_next_object_offset() {
-    let mut journal = Journal::new("tests/system.journal").unwrap();
-    let oh = load_obj_header_at_offset(&journal.file, journal.header.field_hash_table_offset - OBJECT_HEADER_SZ).unwrap();
-    assert_eq!(5584, next_obj_offset(&mut journal.file, &oh).unwrap());
+        let mut journal = Journal::new("tests/user-1000.journal").unwrap();
+
+        let mut obj_iter = ObjectIter::new(&mut journal).unwrap();
+        for obj in obj_iter {
+            if let Object::data(d) = obj {
+                println!("type: {:?} size: {}", d.object.type_, d.object.size);
+                println!("Payload: {:?}", d.payload);
+            }
+        }
+    }
+
+    #[bench]
+    fn bench_object_iter_user(b: &mut Bencher) {
+        b.iter(|| test_object_iter_user());
+    }
 }
