@@ -415,7 +415,7 @@ impl<'a> Iterator for ObjectIter<'a> {
                 self.next_offset = next_obj_offset(&self.journal.file, &o)?;
                 return Some(o);
             },
-            Err(e) => {
+            Err(_) => {
                 return None;
             }
         }
