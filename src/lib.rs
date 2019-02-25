@@ -212,7 +212,7 @@ pub fn load_obj_at_offset(mut file: &File, offset: u64) -> Result<Object> {
             let boot_id = file.read_u128::<LittleEndian>()?;
             let xor_hash = file.read_u64::<LittleEndian>()?;
             let mut items: Vec<EntryItem> = Vec::new();
-            for _ in 0..((size - 48) / 16) {
+            for _ in 1..((size - 48) / 16) {
                 let object_offset = file.read_u64::<LittleEndian>()?;
                 let hash = file.read_u64::<LittleEndian>()?;
                 let item = EntryItem {
