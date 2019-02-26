@@ -3,8 +3,12 @@ extern crate criterion;
 
 use criterion::Criterion;
 use journald::*;
+use std::fs::File;
+use std::io::Cursor;
+use memmap::Mmap;
 
-fn test_object_iter_user(mut journal: &mut Journal) {
+fn test_object_iter_user(cur: Cursor<&[u8]>) {
+    let mut journal = Journal::new(&mut cur).unwrap();
     let mut obj_iter = ObjectIter::new(&mut journal).unwrap();
     for obj in obj_iter {
 	if let Object::Data(d) = obj {
@@ -13,17 +17,13 @@ fn test_object_iter_user(mut journal: &mut Journal) {
     }
 }
 
-fn fibonacci(n: u64) -> u64 {
-    match n {
-        0 => 1,
-        1 => 1,
-        n => fibonacci(n-1) + fibonacci(n-2),
-    }
-}
-
 fn criterion_benchmark(c: &mut Criterion) {
-    let mut journal = Journal::new("tests/user-1000.journal").unwrap();
-    c.bench_function("test_object_iter_user", move |b| b.iter(|| test_object_iter_user(&mut journal)));
+    let mut file = File::open("tests/user-1000.journal").unwrap();
+    let mmap = unsafe { Mmap::map(&file).expect("mmap err") };
+    let buf = &*mmap;
+    let mut cur = Cursor::new(buf);
+
+    c.bench_function("test_object_iter_user", |b| b.iter(|| test_object_iter_user(cur)));
 }
 
 criterion_group!(benches, criterion_benchmark);
