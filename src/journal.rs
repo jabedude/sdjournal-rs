@@ -1,5 +1,6 @@
 use std::fs::File;
 use std::io::Cursor;
+use std::fmt;
 
 pub const OBJECT_HEADER_SZ: u64 = 16;
 pub const DATA_OBJECT_HEADER_SZ: u64 = 48;
@@ -19,6 +20,20 @@ pub enum Object {
     HashTable(HashTableObject),
     EntryArray(EntryArrayObject),
     Tag(TagObject),
+}
+
+impl fmt::Display for Object {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+       match *self {
+           Object::Object(_) => write!(f, "Object header"),
+           Object::Data(_) => write!(f, "data object"),
+           Object::Field(_) => write!(f, "field object"),
+           Object::Entry(_) => write!(f, "entry"),
+           Object::HashTable(_) => write!(f, "hashtable"),
+           Object::EntryArray(_) => write!(f, "entry array"),
+           Object::Tag(_) => write!(f, "tag"),
+       }
+    }
 }
 
 impl SizedObject for Object {

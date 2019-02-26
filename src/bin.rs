@@ -2,6 +2,7 @@ use journald::*;
 use std::env;
 use std::fs::File;
 use std::io::Cursor;
+use std::cell::Cell;
 use memmap::Mmap;
 
 use std::ascii::escape_default;
@@ -23,6 +24,7 @@ fn main() {
     let mut file = File::open(&args[1]).unwrap();
     let mmap = unsafe { Mmap::map(&file).expect("mmap err") };
     let buf = &*mmap;
+    let c = Cell::new(buf);
     let mut cur = Cursor::new(buf);
     let mut journal = Journal::new(cur).unwrap();
     
@@ -30,6 +32,12 @@ fn main() {
     for obj in obj_iter {
         if let Object::Entry(e) = obj {
             println!("entry object time: {}", e.realtime);
+            for eo in e.items {
+                let o = get_obj_at_offset(c.get(), eo.object_offset).unwrap();
+                if let Object::Data(d) = o {
+                    println!("object type {}", show(&d.payload));
+                }
+            }
         }
     }
 
