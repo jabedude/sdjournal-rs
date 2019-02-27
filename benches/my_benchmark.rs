@@ -19,15 +19,30 @@ fn test_object_iter_user(cur: &[u8]) {
     let mut journal = Journal::new(cur).unwrap();
     let mut obj_iter = ObjectIter::new(&mut journal).unwrap();
     for obj in obj_iter {
-	if let Object::Data(d) = obj {
-            let _e = 0;
-	}
+        let _e = 0;
+    }
+}
+
+fn test_entry_iter_user(cur: &[u8]) {
+    let mut journal = Journal::new(cur).unwrap();
+    let entry_iter = EntryIter::new(&mut journal).unwrap();
+    for entry in entry_iter {
+        let _e = 0;
+    }
+}
+
+fn test_obj_header_iter_user(cur: &[u8]) {
+    let mut journal = Journal::new(cur).unwrap();
+    let objheader_iter = ObjectHeaderIter::new(&mut journal).unwrap();
+    for oh in objheader_iter {
+        let _e = 0;
     }
 }
 
 fn criterion_benchmark(c: &mut Criterion) {
-
     c.bench_function("test_object_iter_user", |b| b.iter(|| test_object_iter_user(&BUF)));
+    c.bench_function("test_entry_iter_user", |b| b.iter(|| test_entry_iter_user(&BUF)));
+    c.bench_function("test_obj_header_iter_user", |b| b.iter(|| test_obj_header_iter_user(&BUF)));
 }
 
 criterion_group!(benches, criterion_benchmark);

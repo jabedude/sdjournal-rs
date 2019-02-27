@@ -514,7 +514,6 @@ impl<'a> Journal<'a> {
             header: header,
         })
     }
-
 }
 
 pub struct ObjectHeaderIter<'a> {
@@ -580,7 +579,6 @@ impl<'a> Iterator for ObjectHeaderIter<'a> {
     type Item = ObjectHeader;
 
     fn next(&mut self) -> Option<ObjectHeader> {
-        println!("next offset: {}", self.next_offset);
         let header = self.load_obj_header_at_offset(self.next_offset);
         match header {
             Ok(h) => {
