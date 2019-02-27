@@ -1,5 +1,3 @@
-use std::fs::File;
-use std::io::Cursor;
 use std::fmt;
 
 pub const OBJECT_HEADER_SZ: u64 = 16;
@@ -138,7 +136,6 @@ pub union SdId128 {
     pub qwords: [u64; 2],
 }
 
-#[repr(C, packed)]
 pub struct JournalHeader {
     pub signature: [u8; 8],
     pub compatible_flags: u32,
@@ -173,6 +170,6 @@ pub struct JournalHeader {
 }
 
 pub struct Journal<'a> {
-    pub file: Cursor<&'a [u8]>,
+    pub file: &'a [u8],
     pub header: JournalHeader,
 }

@@ -1,7 +1,6 @@
 use journald::*;
 use std::env;
 use std::fs::File;
-use std::io::Cursor;
 use std::cell::Cell;
 use memmap::Mmap;
 
@@ -25,8 +24,7 @@ fn main() {
     let mmap = unsafe { Mmap::map(&file).expect("mmap err") };
     let buf = &*mmap;
     let c = Cell::new(buf);
-    let mut cur = Cursor::new(buf);
-    let mut journal = Journal::new(cur).unwrap();
+    let mut journal = Journal::new(buf).unwrap();
     
     let obj_iter = ObjectIter::new(&mut journal).unwrap();
     for obj in obj_iter {
@@ -40,12 +38,4 @@ fn main() {
             }
         }
     }
-
-    //let mut obj_iter = ObjectHeaderIter::new(&mut journal).unwrap();
-    //for in obj_iter {
-    //    let oh = obj_iter.next().expect("object iterator error");
-    //    if oh.type_ == ObjectType::ObjectData {
-    //        println!("type: {:?} size: {}", oh.type_, oh.size);
-    //    }
-    //}
 }
