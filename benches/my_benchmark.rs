@@ -13,14 +13,6 @@ fn test_object_iter_user(mut journal: &mut Journal) {
     }
 }
 
-fn fibonacci(n: u64) -> u64 {
-    match n {
-        0 => 1,
-        1 => 1,
-        n => fibonacci(n-1) + fibonacci(n-2),
-    }
-}
-
 fn criterion_benchmark(c: &mut Criterion) {
     let mut journal = Journal::new("tests/user-1000.journal").unwrap();
     c.bench_function("test_object_iter_user", move |b| b.iter(|| test_object_iter_user(&mut journal)));
