@@ -34,11 +34,14 @@ use memmap::Mmap;
         let buf = &*mmap;
         let mut journal = Journal::new(buf).unwrap();
         let mut obj_iter = ObjectHeaderIter::new(&mut journal).unwrap();
+        let mut counter = 0;
         for oh in obj_iter {
             if oh.type_ == ObjectType::ObjectData {
                 println!("type: {:?} size: {}", oh.type_, oh.size);
+                counter += 1;
             }
         }
+        assert_eq!(counter, 843);
     }
 
     #[bench]
