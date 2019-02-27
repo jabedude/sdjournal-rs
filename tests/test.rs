@@ -4,7 +4,6 @@ extern crate test;
 #[cfg(test)]
 mod tests {
 use journald::*;
-use test::Bencher;
 use std::fs::File;
 use std::cell::Cell;
 use memmap::Mmap;
@@ -44,8 +43,4 @@ use memmap::Mmap;
         assert_eq!(counter, 843);
     }
 
-    #[bench]
-    fn bench_object_iter_user(b: &mut Bencher) {
-        b.iter(|| test_object_iter_user());
-    }
 }
