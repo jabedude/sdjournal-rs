@@ -576,7 +576,6 @@ impl<'a> ObjectHeaderIter<'a> {
     }
 }
 
-
 impl<'a> Iterator for ObjectHeaderIter<'a> {
     type Item = ObjectHeader;
 
@@ -820,7 +819,7 @@ impl<'a> ObjectIter<'a> {
             },
             _ => return Err(Error::new(ErrorKind::Other, "Unused MAX Object")),
         }
-}
+    }
 }
 
 pub struct ObjectIter<'a> {
@@ -845,5 +844,35 @@ impl<'a> Iterator for ObjectIter<'a> {
                 return None;
             }
         }
+    }
+}
+
+pub struct EntryIter<'a> {
+    n_objects: u64,
+    inner: ObjectIter<'a>,
+}
+
+impl<'a> EntryIter<'a> {
+    pub fn new(journal: &'a mut Journal<'a>) -> Result<EntryIter<'a>> {
+        let num = journal.header.n_objects;
+        let inner = ObjectIter::new(journal)?;
+        Ok(EntryIter {
+            n_objects: num,
+            inner: inner,
+        })
+    }
+}
+
+impl<'a> Iterator for EntryIter <'a> {
+    type Item = EntryObject;
+
+    fn next(&mut self) -> Option<EntryObject> {
+        for _ in 0..self.n_objects {
+            let obj = self.inner.next()?;
+            if let Object::Entry(e) = obj {
+                return Some(e);
+            }
+        }
+        None
     }
 }

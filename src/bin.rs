@@ -26,16 +26,8 @@ fn main() {
     let c = Cell::new(buf);
     let mut journal = Journal::new(buf).unwrap();
     
-    let obj_iter = ObjectIter::new(&mut journal).unwrap();
-    for obj in obj_iter {
-        if let Object::Entry(e) = obj {
-            println!("entry object time: {}", e.realtime);
-            for eo in e.items {
-                let o = get_obj_at_offset(c.get(), eo.object_offset).unwrap();
-                if let Object::Data(d) = o {
-                    println!("object type {}", show(&d.payload));
-                }
-            }
-        }
+    let entry_iter = EntryIter::new(&mut journal).unwrap();
+    for entry in entry_iter {
+        println!("entry time: {}", entry.realtime);
     }
 }
