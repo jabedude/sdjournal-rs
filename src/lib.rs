@@ -604,8 +604,7 @@ impl<'a> ObjectIter<'a> {
     }
 
     fn next_obj_offset<T: SizedObject>(&mut self, obj: &T) -> Option<u64> {
-        let curr = self.buf.seek(SeekFrom::Current(0)).unwrap();
-        let offset = align64(curr + obj.size());
+        let offset = align64(self.buf.position() + obj.size());
         Some(offset)
     }
 
