@@ -1,8 +1,5 @@
 use std::fmt;
 
-// TODO: time to string
-// TODO: jenkins hash: https://en.wikipedia.org/wiki/Jenkins_hash_function
-
 pub const OBJECT_HEADER_SZ: u64 = 16;
 pub const DATA_OBJECT_HEADER_SZ: u64 = 48;
 pub const FIELD_OBJECT_HEADER_SZ: u64 = 24;

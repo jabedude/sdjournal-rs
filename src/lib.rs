@@ -295,7 +295,6 @@ pub fn get_obj_at_offset(file: &[u8], offset: u64) -> Result<Object> {
 
 impl<'a> Journal<'a> {
     pub fn new(mut path: &'a [u8]) -> Result<Journal<'a>> {
-        //TODO: mmap file
         let header = load_header(&mut path)?;
 
         Ok(Journal{
