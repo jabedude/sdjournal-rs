@@ -15,6 +15,12 @@ fn align64(u: u64) -> u64 {
     (u + 7u64) & !7u64
 }
 
+impl ObjectHeader {
+    pub fn is_compressed(&self) -> bool {
+        self.flags & OBJECT_COMPRESSED_MASK != 0
+    }
+}
+
 fn load_header(file: &[u8]) -> Result<JournalHeader> {
     let mut file = Cursor::new(file);
     let mut signature = [0u8; 8];

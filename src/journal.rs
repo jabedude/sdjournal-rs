@@ -1,5 +1,7 @@
 use std::fmt;
 
+// TODO: compression support
+
 pub const OBJECT_HEADER_SZ: u64 = 16;
 pub const DATA_OBJECT_HEADER_SZ: u64 = 48;
 pub const FIELD_OBJECT_HEADER_SZ: u64 = 24;

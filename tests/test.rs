@@ -9,6 +9,19 @@ use std::cell::Cell;
 use memmap::Mmap;
 
     #[test]
+    fn test_compression_false() {
+        let mut file = File::open("tests/user-1000.journal").unwrap();
+        let mmap = unsafe { Mmap::map(&file).expect("mmap err") };
+        let buf = &*mmap;
+        let c = Cell::new(buf);
+        let mut journal = Journal::new(buf).unwrap();
+        let mut obj_iter = ObjectHeaderIter::new(&mut journal).unwrap();
+        for oh in obj_iter {
+            assert!(!oh.is_compressed());
+        }
+    }
+
+    #[test]
     fn test_hash_object() {
     use journald::hash::rhash64;
 
@@ -18,7 +31,6 @@ use memmap::Mmap;
         let c = Cell::new(buf);
         let mut journal = Journal::new(buf).unwrap();
         let expected = journal.header.n_objects;
-        let mut counter = 0;
         let mut obj_iter = ObjectIter::new(&mut journal).unwrap();
         let obj = obj_iter.next().unwrap();
         let obj = obj_iter.next().unwrap();
