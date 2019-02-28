@@ -14,7 +14,7 @@ fn align64(u: u64) -> u64 {
     (u + 7u64) & !7u64
 }
 
-fn load_header(mut file: &[u8]) -> Result<JournalHeader> {
+fn load_header(file: &[u8]) -> Result<JournalHeader> {
     let mut file = Cursor::new(file);
     let mut signature = [0u8; 8];
     file.read_exact(&mut signature)?;

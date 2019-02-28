@@ -1,7 +1,6 @@
 use journald::*;
 use std::env;
 use std::fs::File;
-use std::cell::Cell;
 use memmap::Mmap;
 
 use std::ascii::escape_default;
@@ -20,10 +19,9 @@ fn show(bs: &[u8]) -> String {
 fn main() {
     let args: Vec<String> = env::args().collect();
 
-    let mut file = File::open(&args[1]).unwrap();
+    let file = File::open(&args[1]).unwrap();
     let mmap = unsafe { Mmap::map(&file).expect("mmap err") };
     let buf = &*mmap;
-    let c = Cell::new(buf);
     let mut journal = Journal::new(buf).unwrap();
     
     let entry_iter = EntryIter::new(&mut journal).unwrap();
