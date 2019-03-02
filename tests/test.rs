@@ -32,13 +32,11 @@ use memmap::Mmap;
         let mut journal = Journal::new(buf).unwrap();
         let expected = journal.header.n_objects;
         let mut obj_iter = ObjectIter::new(&mut journal).unwrap();
-        let obj = obj_iter.next().unwrap();
-        let obj = obj_iter.next().unwrap();
-        let obj = obj_iter.next().unwrap();
-        println!("obj size: {}", obj.size());
-        if let Object::Data(o) = obj {
-            let h = rhash64(&o.payload);
-            assert_eq!(h, o.hash);
+        for obj in obj_iter {
+            if let Object::Data(o) = obj {
+                let h = rhash64(&o.payload);
+                assert_eq!(h, o.hash);
+            }
         }
     }
 
