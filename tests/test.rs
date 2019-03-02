@@ -9,7 +9,33 @@ use std::cell::Cell;
 use memmap::Mmap;
 
     #[test]
-    fn test_compression_false() {
+    fn test_obj_header_iter_compressed() {
+        let mut file = File::open("tests/user-1000-compressed.journal").unwrap();
+        let mmap = unsafe { Mmap::map(&file).expect("mmap err") };
+        let buf = &*mmap;
+        let c = Cell::new(buf);
+        let mut journal = Journal::new(buf).unwrap();
+        let mut obj_iter = ObjectHeaderIter::new(&mut journal).unwrap();
+        for oh in obj_iter {
+            assert!(oh.is_compressed());
+        }
+    }
+
+    #[test]
+    fn test_compression_false_system() {
+        let mut file = File::open("tests/system.journal").unwrap();
+        let mmap = unsafe { Mmap::map(&file).expect("mmap err") };
+        let buf = &*mmap;
+        let c = Cell::new(buf);
+        let mut journal = Journal::new(buf).unwrap();
+        let mut obj_iter = ObjectHeaderIter::new(&mut journal).unwrap();
+        for oh in obj_iter {
+            assert!(!oh.is_compressed());
+        }
+    }
+
+    #[test]
+    fn test_compression_false_user() {
         let mut file = File::open("tests/user-1000.journal").unwrap();
         let mmap = unsafe { Mmap::map(&file).expect("mmap err") };
         let buf = &*mmap;
