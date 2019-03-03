@@ -22,10 +22,25 @@ fn main() {
     let file = File::open(&args[1]).unwrap();
     let mmap = unsafe { Mmap::map(&file).expect("mmap err") };
     let buf = &*mmap;
-    let mut journal = Journal::new(buf).unwrap();
+    let journal = Journal::new(buf).unwrap();
     
-    let entry_iter = EntryIter::new(&mut journal).unwrap();
+    let hdr_iter = journal.header_iter();
+    for oh in hdr_iter {
+        if oh.type_ == ObjectType::ObjectData {
+            println!("type: {:?} size: {}", oh.type_, oh.size);
+        }
+    }
+
+    let obj_iter = journal.obj_iter();
+    for obj in obj_iter {
+        if let Object::Data(d) = obj {
+            println!("type: {:?} size: {}", d.object.type_, d.object.size);
+            println!("Payload: {:?}", d.payload);
+        }
+    }
+
+    let entry_iter = journal.entry_iter();
     for entry in entry_iter {
-        println!("entry time: {}", entry.realtime);
+        println!("timestamp: {}", entry.realtime);
     }
 }

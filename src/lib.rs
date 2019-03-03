@@ -308,6 +308,22 @@ impl<'a> Journal<'a> {
             header: header,
         })
     }
+
+    pub fn header_iter<'b>(&'b self) -> ObjectHeaderIter<'b> {
+        let start = self.header.field_hash_table_offset - OBJECT_HEADER_SZ;
+        ObjectHeaderIter::new(self.file, start)
+    }
+
+    pub fn obj_iter<'b>(&'b self) -> ObjectIter<'b> {
+        let start = self.header.field_hash_table_offset - OBJECT_HEADER_SZ;
+        ObjectIter::new(self.file, start)
+    }
+
+    pub fn entry_iter<'b>(&'b self) -> EntryIter<'b> {
+        let start = self.header.field_hash_table_offset - OBJECT_HEADER_SZ;
+        let n_objects = self.header.n_objects;
+        EntryIter::new(self.file, start, n_objects)
+    }
 }
 
 pub struct ObjectHeaderIter<'a> {
@@ -316,15 +332,14 @@ pub struct ObjectHeaderIter<'a> {
 }
 
 impl<'a> ObjectHeaderIter<'a> {
-    pub fn new(journal: &'a mut Journal<'a>) -> Result<ObjectHeaderIter<'a>> {
-        let mut buf = Cursor::new(journal.file);
-        buf.seek(SeekFrom::Start(journal.header.field_hash_table_offset - OBJECT_HEADER_SZ))?;
-        let offset = journal.header.field_hash_table_offset - OBJECT_HEADER_SZ;
+    fn new(buf: &'a [u8], start: u64) -> ObjectHeaderIter<'a> {
+        let mut buf = Cursor::new(buf);
+        buf.seek(SeekFrom::Start(start)).unwrap();
 
-        Ok(ObjectHeaderIter {
+        ObjectHeaderIter {
             buf: buf,
-            next_offset: offset,
-        })
+            next_offset: start,
+        }
     }
 
     fn next_obj_header_offset<T: SizedObject>(&mut self, obj: &T) -> Option<u64> {
@@ -385,16 +400,15 @@ impl<'a> Iterator for ObjectHeaderIter<'a> {
 }
 
 impl<'a> ObjectIter<'a> {
-    pub fn new(journal: &'a mut Journal<'a>) -> Result<ObjectIter<'a>> {
-        let mut buf = Cursor::new(journal.file);
-        buf.seek(SeekFrom::Start(journal.header.field_hash_table_offset - OBJECT_HEADER_SZ))?;
-        let offset = journal.header.field_hash_table_offset - OBJECT_HEADER_SZ;
+    fn new(buf: &'a [u8], start: u64) -> ObjectIter<'a> {
+        let mut buf = Cursor::new(buf);
+        buf.seek(SeekFrom::Start(start)).unwrap();
 
-        Ok(ObjectIter {
+        ObjectIter {
             buf: buf,
-            current_offset: offset,
-            next_offset: offset,
-        })
+            current_offset: start,
+            next_offset: start,
+        }
     }
 
     fn next_obj_offset<T: SizedObject>(&mut self, obj: &T) -> Option<u64> {
@@ -616,7 +630,7 @@ impl<'a> ObjectIter<'a> {
 
 pub struct ObjectIter<'a> {
     buf: Cursor<&'a [u8]>,
-    pub current_offset: u64,
+    current_offset: u64,
     next_offset: u64,
 }
 
@@ -645,13 +659,12 @@ pub struct EntryIter<'a> {
 }
 
 impl<'a> EntryIter<'a> {
-    pub fn new(journal: &'a mut Journal<'a>) -> Result<EntryIter<'a>> {
-        let num = journal.header.n_objects;
-        let inner = ObjectIter::new(journal)?;
-        Ok(EntryIter {
-            n_objects: num,
+    fn new(buf: &'a [u8], start: u64, n_objects: u64) -> EntryIter<'a> {
+        let inner = ObjectIter::new(buf, start);
+        EntryIter {
+            n_objects: n_objects,
             inner: inner,
-        })
+        }
     }
 }
 
