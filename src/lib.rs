@@ -1,5 +1,6 @@
 #![feature(untagged_unions)]
 use std::io::Cursor;
+use std::str;
 use byteorder::{LittleEndian, ReadBytesExt};
 use std::io::{Read, Result, Error, ErrorKind, Seek, SeekFrom};
 
@@ -323,6 +324,20 @@ impl<'a> Journal<'a> {
         let start = self.header.field_hash_table_offset - OBJECT_HEADER_SZ;
         let n_objects = self.header.n_objects;
         EntryIter::new(self.file, start, n_objects)
+    }
+}
+
+impl EntryObject {
+    pub fn get_data(&self, key: &str, buf: &[u8]) -> Option<String> {
+        for item in self.items.iter() {
+            let obj = get_obj_at_offset(buf, item.object_offset).unwrap();
+            if let Object::Data(o) = obj {
+                if key.as_bytes() == &o.payload[..key.len()] {
+                    return Some(str::from_utf8(&o.payload[key.len()..]).unwrap().to_owned());
+                }
+            }
+        }
+        None
     }
 }
 

@@ -1,6 +1,8 @@
 use std::fmt;
 
 // TODO: compression support
+// TODO: work on entrt struct to allow for propper formatting of entries
+// TODO: use entry arrays to iterate over entries
 
 pub const OBJECT_HEADER_SZ: u64 = 16;
 pub const DATA_OBJECT_HEADER_SZ: u64 = 48;
@@ -9,6 +11,8 @@ pub const FIELD_OBJECT_HEADER_SZ: u64 = 24;
 pub const OBJECT_COMPRESSED_XZ: u8 = 1 << 0;
 pub const OBJECT_COMPRESSED_LZ4: u8 = 1 << 1;
 pub const OBJECT_COMPRESSED_MASK: u8 = OBJECT_COMPRESSED_XZ | OBJECT_COMPRESSED_LZ4;
+
+pub const TAG_LENGTH: usize = (256 / 8);
 
 /// This trait guarantees an object that implements it can return it's
 /// own size.
