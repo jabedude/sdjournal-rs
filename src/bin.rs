@@ -24,9 +24,10 @@ fn main() {
     let buf = &*mmap;
     let journal = Journal::new(buf).unwrap();
     
-    let entry_iter = journal.entry_iter();
-    for entry in entry_iter {
-        println!("timestamp: {}", entry.realtime);
-        println!("message: {}", entry.get_data("MESSAGE", buf).unwrap());
+    let ea_iter = journal.ea_iter();
+    for ea in ea_iter {
+        for item in ea.items {
+            println!("item: {}", item);
+        }
     }
 }

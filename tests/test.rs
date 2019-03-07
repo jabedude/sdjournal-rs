@@ -157,4 +157,22 @@ use memmap::Mmap;
         }
         assert_eq!(counter, expected);
     }
+
+    #[test]
+    fn test_entry_array_iter_user() {
+
+        let file = File::open("tests/user-1000.journal").unwrap();
+        let mmap = unsafe { Mmap::map(&file).expect("mmap err") };
+        let buf = &*mmap;
+        let journal = Journal::new(buf).unwrap();
+        let expected = journal.header.n_entries;
+        let mut counter = 0;
+        let ent_iter = journal.ea_iter();
+        for ea in ent_iter {
+            for _ in ea.items {
+                counter += 1;
+            }
+        }
+        assert_eq!(counter, expected);
+    }
 }
