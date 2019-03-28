@@ -1,5 +1,6 @@
 #![feature(untagged_unions)]
 use std::io::Cursor;
+use std::str;
 use byteorder::{LittleEndian, ReadBytesExt};
 use std::io::{Read, Result, Error, ErrorKind, Seek, SeekFrom};
 
@@ -261,8 +262,11 @@ pub fn get_obj_at_offset(file: &[u8], offset: u64) -> Result<Object> {
             };
             let next_entry_array_offset = file.read_u64::<LittleEndian>()?;
             let mut items: Vec<u64> = Vec::new();
-            for _ in 0..((size - 48) / 8) {
+            for _ in 0..((size - 20) / 8) {
                 let item = file.read_u64::<LittleEndian>()?;
+                if item == 0u64 {
+                    continue;
+                }
                 items.push(item);
             }
             let entry_array_object = EntryArrayObject {
@@ -308,6 +312,41 @@ impl<'a> Journal<'a> {
             header: header,
         })
     }
+
+    pub fn header_iter<'b>(&'b self) -> ObjectHeaderIter<'b> {
+        let start = self.header.field_hash_table_offset - OBJECT_HEADER_SZ;
+        ObjectHeaderIter::new(self.file, start)
+    }
+
+    pub fn obj_iter<'b>(&'b self) -> ObjectIter<'b> {
+        let start = self.header.field_hash_table_offset - OBJECT_HEADER_SZ;
+        ObjectIter::new(self.file, start)
+    }
+
+    pub fn entry_iter<'b>(&'b self) -> EntryIter<'b> {
+        let start = self.header.field_hash_table_offset - OBJECT_HEADER_SZ;
+        let n_objects = self.header.n_objects;
+        EntryIter::new(self.file, start, n_objects)
+    }
+
+    pub fn ea_iter<'b>(&'b self) -> EntryArrayIter<'b> {
+        let start = self.header.entry_array_offset;
+        EntryArrayIter::new(self.file, start)
+    }
+}
+
+impl EntryObject {
+    pub fn get_data(&self, key: &str, buf: &[u8]) -> Option<String> {
+        for item in self.items.iter() {
+            let obj = get_obj_at_offset(buf, item.object_offset).unwrap();
+            if let Object::Data(o) = obj {
+                if key.as_bytes() == &o.payload[..key.len()] {
+                    return Some(str::from_utf8(&o.payload[key.len()..]).unwrap().to_owned());
+                }
+            }
+        }
+        None
+    }
 }
 
 pub struct ObjectHeaderIter<'a> {
@@ -316,15 +355,14 @@ pub struct ObjectHeaderIter<'a> {
 }
 
 impl<'a> ObjectHeaderIter<'a> {
-    pub fn new(journal: &'a mut Journal<'a>) -> Result<ObjectHeaderIter<'a>> {
-        let mut buf = Cursor::new(journal.file);
-        buf.seek(SeekFrom::Start(journal.header.field_hash_table_offset - OBJECT_HEADER_SZ))?;
-        let offset = journal.header.field_hash_table_offset - OBJECT_HEADER_SZ;
+    fn new(buf: &'a [u8], start: u64) -> ObjectHeaderIter<'a> {
+        let mut buf = Cursor::new(buf);
+        buf.seek(SeekFrom::Start(start)).unwrap();
 
-        Ok(ObjectHeaderIter {
+        ObjectHeaderIter {
             buf: buf,
-            next_offset: offset,
-        })
+            next_offset: start,
+        }
     }
 
     fn next_obj_header_offset<T: SizedObject>(&mut self, obj: &T) -> Option<u64> {
@@ -385,21 +423,19 @@ impl<'a> Iterator for ObjectHeaderIter<'a> {
 }
 
 impl<'a> ObjectIter<'a> {
-    pub fn new(journal: &'a mut Journal<'a>) -> Result<ObjectIter<'a>> {
-        let mut buf = Cursor::new(journal.file);
-        buf.seek(SeekFrom::Start(journal.header.field_hash_table_offset - OBJECT_HEADER_SZ))?;
-        let offset = journal.header.field_hash_table_offset - OBJECT_HEADER_SZ;
+    fn new(buf: &'a [u8], start: u64) -> ObjectIter<'a> {
+        let mut buf = Cursor::new(buf);
+        buf.seek(SeekFrom::Start(start)).unwrap();
 
-        Ok(ObjectIter {
+        ObjectIter {
             buf: buf,
-            current_offset: offset,
-            next_offset: offset,
-        })
+            current_offset: start,
+            next_offset: start,
+        }
     }
 
     fn next_obj_offset<T: SizedObject>(&mut self, obj: &T) -> Option<u64> {
-        let curr = self.buf.seek(SeekFrom::Current(0)).unwrap();
-        let offset = align64(curr + obj.size());
+        let offset = align64(self.buf.position() + obj.size());
         Some(offset)
     }
 
@@ -575,8 +611,11 @@ impl<'a> ObjectIter<'a> {
                 };
                 let next_entry_array_offset = self.buf.read_u64::<LittleEndian>()?;
                 let mut items: Vec<u64> = Vec::new();
-                for _ in 0..((size - 48) / 8) {
+                for _ in 0..((size - 20) / 8) {
                     let item = self.buf.read_u64::<LittleEndian>()?;
+                    if item == 0u64 {
+                        continue;
+                    }
                     items.push(item);
                 }
                 let entry_array_object = EntryArrayObject {
@@ -639,19 +678,55 @@ impl<'a> Iterator for ObjectIter<'a> {
     }
 }
 
+pub struct EntryArrayIter<'a> {
+    buf: Cursor<&'a [u8]>,
+    current_offset: u64,
+}
+
+impl<'a> EntryArrayIter<'a> {
+    fn new(buf: &'a [u8], start: u64) -> EntryArrayIter<'a> {
+        let mut buf = Cursor::new(buf);
+        buf.seek(SeekFrom::Start(start)).unwrap();
+
+        EntryArrayIter {
+            buf: buf,
+            current_offset: start,
+        }
+    }
+}
+
+impl<'a> Iterator for EntryArrayIter<'a> {
+    type Item = EntryArrayObject;
+
+    fn next(&mut self) -> Option<EntryArrayObject> {
+        if self.current_offset == 0 {
+            return None;
+        }
+        let entry_array = get_obj_at_offset(self.buf.get_ref(), self.current_offset);
+        match entry_array {
+            Ok(h) => {
+                if let Object::EntryArray(ea) = h {
+                    self.current_offset = ea.next_entry_array_offset;
+                    return Some(ea);
+                } else { return None; }
+            },
+            Err(_) => return None,
+        }
+    }
+}
+
 pub struct EntryIter<'a> {
     n_objects: u64,
     inner: ObjectIter<'a>,
 }
 
 impl<'a> EntryIter<'a> {
-    pub fn new(journal: &'a mut Journal<'a>) -> Result<EntryIter<'a>> {
-        let num = journal.header.n_objects;
-        let inner = ObjectIter::new(journal)?;
-        Ok(EntryIter {
-            n_objects: num,
+    fn new(buf: &'a [u8], start: u64, n_objects: u64) -> EntryIter<'a> {
+        let inner = ObjectIter::new(buf, start);
+        EntryIter {
+            n_objects: n_objects,
             inner: inner,
-        })
+        }
     }
 }
 

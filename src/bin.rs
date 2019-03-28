@@ -22,10 +22,12 @@ fn main() {
     let file = File::open(&args[1]).unwrap();
     let mmap = unsafe { Mmap::map(&file).expect("mmap err") };
     let buf = &*mmap;
-    let mut journal = Journal::new(buf).unwrap();
+    let journal = Journal::new(buf).unwrap();
     
-    let entry_iter = EntryIter::new(&mut journal).unwrap();
-    for entry in entry_iter {
-        println!("entry time: {}", entry.realtime);
+    let ea_iter = journal.ea_iter();
+    for ea in ea_iter {
+        for item in ea.items {
+            println!("item: {}", item);
+        }
     }
 }
