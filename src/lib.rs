@@ -313,6 +313,15 @@ impl<'a> Journal<'a> {
         })
     }
 
+    pub fn state(&self) -> JournalState {
+        match self.header.state {
+            0 => JournalState::Offline,
+            1 => JournalState::Online,
+            2 => JournalState::Archived,
+            _ => JournalState::StateMax,
+        }
+    }
+
     pub fn header_iter<'b>(&'b self) -> ObjectHeaderIter<'b> {
         let start = self.header.field_hash_table_offset - OBJECT_HEADER_SZ;
         ObjectHeaderIter::new(self.file, start)

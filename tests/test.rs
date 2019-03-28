@@ -5,6 +5,15 @@ use std::fs::File;
 use memmap::Mmap;
 
     #[test]
+    fn test_journal_state_offline() {
+        let file = File::open("tests/user-1000.journal").unwrap();
+        let mmap = unsafe { Mmap::map(&file).expect("mmap err") };
+        let buf = &*mmap;
+        let journal = Journal::new(buf).unwrap();
+        assert!(journal.state() == JournalState::Offline);
+    }
+
+    #[test]
     fn test_header_parsing_user() {
         let file = File::open("tests/user-1000.journal").unwrap();
         let mmap = unsafe { Mmap::map(&file).expect("mmap err") };

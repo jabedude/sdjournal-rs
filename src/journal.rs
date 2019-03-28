@@ -13,6 +13,14 @@ pub const OBJECT_COMPRESSED_MASK: u8 = OBJECT_COMPRESSED_XZ | OBJECT_COMPRESSED_
 
 pub const TAG_LENGTH: usize = (256 / 8);
 
+#[derive(PartialEq)]
+pub enum JournalState {
+    Offline,
+    Online,
+    Archived,
+    StateMax,
+}
+
 /// This trait guarantees an object that implements it can return it's
 /// own size.
 pub trait SizedObject {
