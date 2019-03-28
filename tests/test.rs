@@ -2,6 +2,7 @@
 mod tests {
 use journald::*;
 use std::fs::File;
+use std::cell::Cell;
 use memmap::Mmap;
 
     #[test]
@@ -11,7 +12,7 @@ use memmap::Mmap;
         let buf = &*mmap;
         let c = Cell::new(buf);
         let mut journal = Journal::new(buf).unwrap();
-        let mut obj_iter = ObjectHeaderIter::new(&mut journal).unwrap();
+        let mut obj_iter = journal.header_iter();
         for oh in obj_iter {
             assert!(oh.is_compressed());
         }
@@ -24,7 +25,7 @@ use memmap::Mmap;
         let buf = &*mmap;
         let c = Cell::new(buf);
         let mut journal = Journal::new(buf).unwrap();
-        let mut obj_iter = ObjectHeaderIter::new(&mut journal).unwrap();
+        let mut obj_iter = journal.header_iter();
         for oh in obj_iter {
             assert!(!oh.is_compressed());
         }
