@@ -2,7 +2,6 @@ use std::fmt;
 
 // TODO: compression support
 // TODO: work on entrt struct to allow for propper formatting of entries
-// TODO: use entry arrays to iterate over entries
 
 pub const OBJECT_HEADER_SZ: u64 = 16;
 pub const DATA_OBJECT_HEADER_SZ: u64 = 48;
