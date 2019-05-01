@@ -545,5 +545,3 @@ static inline int __coverity_check__(int condition) {
 #define DEFINE_PUBLIC_TRIVIAL_REF_UNREF_FUNC(type, name, free_func)    \
         DEFINE_PUBLIC_TRIVIAL_REF_FUNC(type, name);                    \
         DEFINE_PUBLIC_TRIVIAL_UNREF_FUNC(type, name, free_func);
-
-#include "log.h"
