@@ -199,4 +199,26 @@ use memmap::Mmap;
         }
         assert_eq!(counter, expected);
     }
+
+    #[test]
+    fn test_data_object_is_trusted() {
+        let file = File::open("tests/user-1000.journal").unwrap();
+        let mmap = unsafe { Mmap::map(&file).expect("mmap err") };
+        let buf = &*mmap;
+        let journal = Journal::new(buf).unwrap();
+
+        let ent_iter = journal.entry_iter();
+        for ent in ent_iter {
+            for obj in ent.items {
+                let data = match get_obj_at_offset(buf, obj.object_offset).unwrap() {
+                    Object::Data(d) => d,
+                    _ => continue,
+                };
+                let string = std::str::from_utf8(&data.payload).unwrap();
+                if string.starts_with('_') {
+                    assert!(data.payload_is_trusted());
+                }
+            }
+        }
+    }
 }

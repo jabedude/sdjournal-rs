@@ -102,6 +102,12 @@ pub struct DataObject {
     pub payload: Vec<u8>,
 }
 
+impl DataObject {
+    pub fn payload_is_trusted(&self) -> bool {
+        0x5f == self.payload[0]
+    }
+}
+
 pub struct FieldObject {
     pub object: ObjectHeader,
     pub hash: u64,
