@@ -26,14 +26,25 @@ fn main() {
     
     let ent_iter = journal.entry_iter();
     for ent in ent_iter {
-        println!("ent: {}", ent.realtime);
+        //println!("ent: {}", ent.realtime);
         for obj in ent.items {
             //println!("obj: {}", obj.object_offset);
             let data = match get_obj_at_offset(buf, obj.object_offset).unwrap() {
                 Object::Data(d) => d,
                 _ => continue,
             };
-            println!("obj: {}", str::from_utf8(&data.payload).unwrap());
+
+            let string = str::from_utf8(&data.payload).unwrap();
+            //println!("string: {}", string);
+
+            let kv: Vec<&str> = string.split("=").collect();
+            //println!("kv: {:?}", kv);
+
+            if kv[0] == "SYSLOG_IDENTIFIER" {
+                print!("{}: ", kv[1]);
+            } else if kv [0] == "MESSAGE" {
+                println!("{}", kv[1]);
+            }
         }
     }
 }
