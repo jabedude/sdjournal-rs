@@ -6,6 +6,8 @@ use memmap::Mmap;
 use std::ascii::escape_default;
 use std::str;
 
+// TODO: work on entrt struct to allow for propper formatting of entries
+
 fn show(bs: &[u8]) -> String {
     let mut visible = String::new();
     for &b in bs {
