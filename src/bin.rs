@@ -24,10 +24,16 @@ fn main() {
     let buf = &*mmap;
     let journal = Journal::new(buf).unwrap();
     
-    let ea_iter = journal.ea_iter();
-    for ea in ea_iter {
-        for item in ea.items {
-            println!("item: {}", item);
+    let ent_iter = journal.entry_iter();
+    for ent in ent_iter {
+        println!("ent: {}", ent.realtime);
+        for obj in ent.items {
+            //println!("obj: {}", obj.object_offset);
+            let data = match get_obj_at_offset(buf, obj.object_offset).unwrap() {
+                Object::Data(d) => d,
+                _ => continue,
+            };
+            println!("obj: {}", str::from_utf8(&data.payload).unwrap());
         }
     }
 }
