@@ -1,5 +1,5 @@
 [package]
-name = "journald-rust"
+name = "journalctl-rust"
 version = "0.2.0"
 authors = ["Josh Abraham <sinisterpatrician@gmail.com>"]
 edition = "2018"
