@@ -17,8 +17,8 @@ lazy_static! {
 
 fn test_retrieve_data(cur: &[u8]) {
     let journal = Journal::new(cur).unwrap();
-    let entry_iter = journal.entry_iter();
-    for entry in entry_iter {
+    let iter_entries = journal.iter_entries();
+    for entry in iter_entries {
         entry.get_data("MESSAGE", cur);
     }
 }
@@ -31,15 +31,15 @@ fn test_object_iter_user(cur: &[u8]) {
     }
 }
 
-fn test_entry_iter_user(cur: &[u8]) {
+fn test_iter_entries_user(cur: &[u8]) {
     let journal = Journal::new(cur).unwrap();
-    let entry_iter = journal.entry_iter();
-    for _entry in entry_iter {
+    let iter_entries = journal.iter_entries();
+    for _entry in iter_entries {
         let _e = 0;
     }
 }
 
-fn test_entry_iter_new_api_user(cur: &[u8]) {
+fn test_iter_entries_new_api_user(cur: &[u8]) {
     let journal = Journal::new(cur).unwrap();
     let ea_iter = journal.ea_iter();
     for ea in ea_iter {
@@ -59,10 +59,10 @@ fn test_obj_header_iter_user(cur: &[u8]) {
 
 fn criterion_benchmark(c: &mut Criterion) {
     c.bench_function("test_object_iter_user", |b| b.iter(|| test_object_iter_user(&BUF)));
-    c.bench_function("test_entry_iter_user", |b| b.iter(|| test_entry_iter_user(&BUF)));
+    c.bench_function("test_iter_entries_user", |b| b.iter(|| test_iter_entries_user(&BUF)));
     c.bench_function("test_obj_header_iter_user", |b| b.iter(|| test_obj_header_iter_user(&BUF)));
     c.bench_function("test_retrieve_data", |b| b.iter(|| test_retrieve_data(&BUF)));
-    c.bench_function("test_entry_iter_new_api_user", |b| b.iter(|| test_entry_iter_new_api_user(&BUF)));
+    c.bench_function("test_iter_entries_new_api_user", |b| b.iter(|| test_iter_entries_new_api_user(&BUF)));
 }
 
 criterion_group!(benches, criterion_benchmark);

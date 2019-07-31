@@ -332,7 +332,7 @@ impl<'a> Journal<'a> {
         ObjectIter::new(self.file, start)
     }
 
-    pub fn entry_iter<'b>(&'b self) -> EntryIter<'b> {
+    pub fn iter_entries<'b>(&'b self) -> EntryIter<'b> {
         let start = self.header.field_hash_table_offset - OBJECT_HEADER_SZ;
         let n_objects = self.header.n_objects;
         EntryIter::new(self.file, start, n_objects)

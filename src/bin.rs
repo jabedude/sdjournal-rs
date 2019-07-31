@@ -24,7 +24,7 @@ fn main() {
     let buf = &*mmap;
     let journal = Journal::new(buf).unwrap();
     
-    let ent_iter = journal.entry_iter();
+    let ent_iter = journal.iter_entries();
     for ent in ent_iter {
         //println!("ent: {}", ent.realtime);
         for obj in ent.items {

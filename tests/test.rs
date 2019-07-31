@@ -78,7 +78,7 @@ use memmap::Mmap;
     }
 
     #[test]
-    fn test_entry_iter_user() {
+    fn test_iter_entries_user() {
 
         let file = File::open("tests/user-1000.journal").unwrap();
         let mmap = unsafe { Mmap::map(&file).expect("mmap err") };
@@ -86,7 +86,7 @@ use memmap::Mmap;
         let journal = Journal::new(buf).unwrap();
         let expected = journal.header.n_entries;
         let mut counter = 0;
-        let ent_iter = journal.entry_iter();
+        let ent_iter = journal.iter_entries();
         for _ in ent_iter {
             counter += 1;
         }
@@ -108,8 +108,8 @@ use memmap::Mmap;
         }
 
         let _obj_iter = journal.obj_iter();
-        let entry_iter = journal.entry_iter();
-        for entry in entry_iter {
+        let iter_entries = journal.iter_entries();
+        for entry in iter_entries {
             println!("timestamp: {}", entry.realtime);
         }
     }
@@ -167,7 +167,7 @@ use memmap::Mmap;
     }
 
     #[test]
-    fn test_entry_iter_system() {
+    fn test_iter_entries_system() {
 
         let file = File::open("tests/system.journal").unwrap();
         let mmap = unsafe { Mmap::map(&file).expect("mmap err") };
@@ -175,7 +175,7 @@ use memmap::Mmap;
         let journal = Journal::new(buf).unwrap();
         let expected = journal.header.n_entries;
         let mut counter = 0;
-        let ent_iter = journal.entry_iter();
+        let ent_iter = journal.iter_entries();
         for _ in ent_iter {
             counter += 1;
         }
@@ -207,7 +207,7 @@ use memmap::Mmap;
         let buf = &*mmap;
         let journal = Journal::new(buf).unwrap();
 
-        let ent_iter = journal.entry_iter();
+        let ent_iter = journal.iter_entries();
         for ent in ent_iter {
             for obj in ent.items {
                 let data = match get_obj_at_offset(buf, obj.object_offset).unwrap() {
