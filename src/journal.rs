@@ -27,13 +27,21 @@ pub trait SizedObject {
     fn size(&self) -> u64;
 }
 
+/// Represents all the possible types of objects in a journal file.
 pub enum Object {
+    /// Holds the common object header for any object
     Object(ObjectHeader),
+    /// Holds data in the payload field
     Data(DataObject),
+    /// Holds the field name data, such as "_SYSTEMD_UNIT"
     Field(FieldObject),
+    /// Represents a log entry
     Entry(EntryObject),
+    /// A hash table with offsets to data and field objects
     HashTable(HashTableObject),
+    /// A hash table with offsets to data and field objects
     EntryArray(EntryArrayObject),
+    /// An object used to seal the journal from modification
     Tag(TagObject),
 }
 

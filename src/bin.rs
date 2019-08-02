@@ -32,6 +32,7 @@ fn main() {
     let buf = &*mmap;
     let journal = Journal::new(buf).unwrap();
     
+    //Iterate over all entry objects
     let ent_iter = journal.iter_entries();
     for ent in ent_iter {
         //println!("ent: {}", ent.realtime);
