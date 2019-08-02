@@ -21,6 +21,7 @@ fn show(bs: &[u8]) -> String {
 fn main() {
     let args: Vec<String> = env::args().collect();
 
+    // TODO: going to need to handle command line flags...
     if args.len() != 2 {
         println!("Usage: {} <journal file>", args[0]);
         return;
