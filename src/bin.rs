@@ -21,6 +21,11 @@ fn show(bs: &[u8]) -> String {
 fn main() {
     let args: Vec<String> = env::args().collect();
 
+    if args.len() != 2 {
+        println!("Usage: {} <journal file>", args[0]);
+        return;
+    }
+
     let file = File::open(&args[1]).unwrap();
     let mmap = unsafe { Mmap::map(&file).expect("mmap err") };
     let buf = &*mmap;
