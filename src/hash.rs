@@ -13,6 +13,7 @@ pub fn rhash64(data: &[u8]) -> u64 {
 
 
 
+// TODO: fix this to run on `cargo test`
 #[cfg(test)]
 mod tests {
     #[test]
