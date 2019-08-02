@@ -86,6 +86,7 @@ pub enum ObjectType {
     ObjectTypeMax
 }
 
+/// The common object header for any object
 pub struct ObjectHeader {
     pub type_: ObjectType,
     pub flags: u8,
