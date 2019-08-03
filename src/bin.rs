@@ -2,6 +2,9 @@ use journald::*;
 use std::env;
 use std::fs::File;
 use memmap::Mmap;
+use chrono::prelude::DateTime;
+use chrono::{Utc};
+use std::time::{SystemTime, UNIX_EPOCH, Duration};
 
 use std::ascii::escape_default;
 use std::str;
@@ -35,7 +38,10 @@ fn main() {
     //Iterate over all entry objects
     let ent_iter = journal.iter_entries();
     for ent in ent_iter {
-        //println!("ent: {}", ent.realtime);
+        let d = UNIX_EPOCH + Duration::from_micros(ent.realtime);
+        let datetime = DateTime::<Utc>::from(d);
+        // Formats the combined date and time with the specified format string.
+        print!("{} ", datetime.format("%b %d %H:%M:%S"));
         for obj in ent.items {
             //println!("obj: {}", obj.object_offset);
             let data = match get_obj_at_offset(buf, obj.object_offset).unwrap() {
