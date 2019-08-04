@@ -4,22 +4,10 @@ use std::fs::File;
 use memmap::Mmap;
 use chrono::prelude::DateTime;
 use chrono::{Utc};
-use std::time::{SystemTime, UNIX_EPOCH, Duration};
-
-use std::ascii::escape_default;
-use std::str;
+use std::time::{UNIX_EPOCH, Duration};
 use std::io::Write;
 
 // TODO: work on entrt struct to allow for propper formatting of entries
-
-fn show(bs: &[u8]) -> String {
-    let mut visible = String::new();
-    for &b in bs {
-        let part: Vec<u8> = escape_default(b).collect();
-        visible.push_str(str::from_utf8(&part).unwrap());
-    }
-    visible
-}
 
 
 fn main() {
@@ -37,8 +25,7 @@ fn main() {
     let journal = Journal::new(buf).unwrap();
     
     //Iterate over all entry objects
-    let ent_iter = journal.iter_entries();
-    for ent in ent_iter {
+    for ent in journal.iter_entries() {
         let d = UNIX_EPOCH + Duration::from_micros(ent.realtime);
         let datetime = DateTime::<Utc>::from(d);
         // Formats the combined date and time with the specified format string.
@@ -51,10 +38,10 @@ fn main() {
             };
 
             if data.payload.starts_with(b"SYSLOG_IDENTIFIER") {
-                std::io::stdout().write_all(&data.payload[18..]);
+                std::io::stdout().write_all(&data.payload[18..]).unwrap();
             } else if data.payload.starts_with(b"MESSAGE") {
-                std::io::stdout().write_all(&data.payload[7..]);
-                std::io::stdout().write_all(b"\n");
+                std::io::stdout().write_all(&data.payload[7..]).unwrap();
+                std::io::stdout().write_all(b"\n").unwrap();
             }
 
         }
