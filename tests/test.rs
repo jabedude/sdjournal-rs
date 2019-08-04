@@ -18,7 +18,6 @@ mod tests {
         let mut file = File::open("tests/user-1000-compressed.journal").unwrap();
         let mmap = unsafe { Mmap::map(&file).expect("mmap err") };
         let buf = &*mmap;
-        let c = Cell::new(buf);
         let mut journal = Journal::new(buf).unwrap();
         let mut obj_iter = journal.header_iter();
         for oh in obj_iter {
@@ -31,7 +30,6 @@ mod tests {
         let mut file = File::open("tests/system.journal").unwrap();
         let mmap = unsafe { Mmap::map(&file).expect("mmap err") };
         let buf = &*mmap;
-        let c = Cell::new(buf);
         let mut journal = Journal::new(buf).unwrap();
         let mut obj_iter = journal.header_iter();
         for oh in obj_iter {
