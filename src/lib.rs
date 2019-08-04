@@ -1,6 +1,7 @@
 #![feature(untagged_unions)]
 use std::io::Cursor;
 use std::str;
+use std::convert::TryInto;
 use byteorder::{LittleEndian, ReadBytesExt};
 use std::io::{Read, Result, Error, ErrorKind, Seek, SeekFrom};
 
@@ -174,7 +175,7 @@ pub fn get_obj_at_offset(file: &[u8], offset: u64) -> Result<Object> {
             let monotonic = file.read_u64::<LittleEndian>()?;
             let boot_id = file.read_u128::<LittleEndian>()?;
             let xor_hash = file.read_u64::<LittleEndian>()?;
-            let mut items: Vec<EntryItem> = Vec::new();
+            let mut items: Vec<EntryItem> = Vec::with_capacity(((size - 48) / 16).try_into().unwrap());
             for _ in 1..((size - 48) / 16) {
                 let object_offset = file.read_u64::<LittleEndian>()?;
                 let hash = file.read_u64::<LittleEndian>()?;
@@ -206,7 +207,7 @@ pub fn get_obj_at_offset(file: &[u8], offset: u64) -> Result<Object> {
                 reserved: reserved,
                 size: size,
             };
-            let mut items: Vec<HashItem> = Vec::new();
+            let mut items: Vec<HashItem> = Vec::with_capacity(((size - 48) / 16).try_into().unwrap());
             for _ in 0..((size - 48) / 16) {
                 let hash_head_offset = file.read_u64::<LittleEndian>()?;
                 let tail_hash_offset = file.read_u64::<LittleEndian>()?;
@@ -233,7 +234,7 @@ pub fn get_obj_at_offset(file: &[u8], offset: u64) -> Result<Object> {
                 reserved: reserved,
                 size: size,
             };
-            let mut items: Vec<HashItem> = Vec::new();
+            let mut items: Vec<HashItem> = Vec::with_capacity(((size - 48) / 16).try_into().unwrap());
             for _ in 0..((size - 48) / 16) {
                 let hash_head_offset = file.read_u64::<LittleEndian>()?;
                 let tail_hash_offset = file.read_u64::<LittleEndian>()?;
@@ -261,7 +262,7 @@ pub fn get_obj_at_offset(file: &[u8], offset: u64) -> Result<Object> {
                 size: size,
             };
             let next_entry_array_offset = file.read_u64::<LittleEndian>()?;
-            let mut items: Vec<u64> = Vec::new();
+            let mut items: Vec<u64> = Vec::with_capacity(((size - 20) / 8).try_into().unwrap());
             for _ in 0..((size - 20) / 8) {
                 let item = file.read_u64::<LittleEndian>()?;
                 if item == 0u64 {
@@ -532,7 +533,7 @@ impl<'a> ObjectIter<'a> {
                 let monotonic = self.buf.read_u64::<LittleEndian>()?;
                 let boot_id = self.buf.read_u128::<LittleEndian>()?;
                 let xor_hash = self.buf.read_u64::<LittleEndian>()?;
-                let mut items: Vec<EntryItem> = Vec::new();
+                let mut items: Vec<EntryItem> = Vec::with_capacity(((size - 48) / 16).try_into().unwrap());
                 for _ in 1..((size - 48) / 16) {
                     let object_offset = self.buf.read_u64::<LittleEndian>()?;
                     let hash = self.buf.read_u64::<LittleEndian>()?;
@@ -564,7 +565,7 @@ impl<'a> ObjectIter<'a> {
                     reserved: reserved,
                     size: size,
                 };
-                let mut items: Vec<HashItem> = Vec::new();
+                let mut items: Vec<HashItem> = Vec::with_capacity(((size - 48) / 16).try_into().unwrap());
                 for _ in 0..((size - 48) / 16) {
                     let hash_head_offset = self.buf.read_u64::<LittleEndian>()?;
                     let tail_hash_offset = self.buf.read_u64::<LittleEndian>()?;
@@ -591,7 +592,7 @@ impl<'a> ObjectIter<'a> {
                     reserved: reserved,
                     size: size,
                 };
-                let mut items: Vec<HashItem> = Vec::new();
+                let mut items: Vec<HashItem> = Vec::with_capacity(((size - 48) / 16).try_into().unwrap());
                 for _ in 0..((size - 48) / 16) {
                     let hash_head_offset = self.buf.read_u64::<LittleEndian>()?;
                     let tail_hash_offset = self.buf.read_u64::<LittleEndian>()?;
@@ -619,7 +620,7 @@ impl<'a> ObjectIter<'a> {
                     size: size,
                 };
                 let next_entry_array_offset = self.buf.read_u64::<LittleEndian>()?;
-                let mut items: Vec<u64> = Vec::new();
+                let mut items: Vec<u64> = Vec::with_capacity(((size - 20) / 8).try_into().unwrap());
                 for _ in 0..((size - 20) / 8) {
                     let item = self.buf.read_u64::<LittleEndian>()?;
                     if item == 0u64 {
