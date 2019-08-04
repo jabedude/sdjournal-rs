@@ -21,6 +21,17 @@ pub enum JournalState {
     StateMax,
 }
 
+impl fmt::Display for JournalState {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match *self {
+            JournalState::Offline => write!(f, "OFFLINE"),
+            JournalState::Online => write!(f, "ONLINE"),
+            JournalState::Archived => write!(f, "ARCHIVED"),
+            JournalState::StateMax => write!(f, "MAX"),
+        }
+    }
+}
+
 /// This trait guarantees an object that implements it can return it's
 /// own size.
 pub trait SizedObject {
@@ -200,6 +211,25 @@ pub struct JournalHeader {
     /* Added in 189 */
     pub n_tags: u64,
     pub n_entry_arrays: u64,
+}
+
+impl fmt::Display for JournalHeader {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let out = format!(
+            "File ID: {:x}\nMachine ID: {:x}\nBoot ID: {}\nSequential Number ID: {}\
+            State: {}\nCompatible Flags: {}\nIncompatible Flags: {}\nHeader size: {}\n\
+            Arena size: {}\nData Hash Table Size: {}\nField Hash Table Size: {}\n\
+            Head Sequential Number: {}\nTail Sequential Number: {}\nHead Realtime Timestamp: {}\n\
+            Tail Realtime Timestamp: {}\nTail Monotonic Timestamp: {}\nObjects: {}\nEntry Objects: {}\n\
+            Data Objects: {}\nField Objects: {}\nTag Objects: {}\nEntry Array Objects: {}\n",
+            self.file_id, self.machine_id, self.boot_id, self.seqnum_id, self.state, self.compatible_flags,
+            self.incompatible_flags, self.header_size, self.arena_size, self.data_hash_table_size,
+            self.field_hash_table_size, self.head_entry_seqnum, self.tail_entry_seqnum, self.head_entry_realtime,
+            self.tail_entry_realtime, self.tail_entry_monotonic, self.n_objects, self.n_entries, self.n_fields,
+            self.n_data, self.n_tags, self.n_entry_arrays
+        );
+        write!(f, "{}", out)
+    }
 }
 
 pub struct Journal<'a> {
