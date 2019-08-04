@@ -8,6 +8,7 @@ use std::time::{SystemTime, UNIX_EPOCH, Duration};
 
 use std::ascii::escape_default;
 use std::str;
+use std::io::Write;
 
 // TODO: work on entrt struct to allow for propper formatting of entries
 
@@ -49,17 +50,24 @@ fn main() {
                 _ => continue,
             };
 
-            let string = str::from_utf8(&data.payload).unwrap();
-            //println!("string: {}", string);
-
-            let kv: Vec<&str> = string.split("=").collect();
-            //println!("kv: {:?}", kv);
-
-            if kv[0] == "SYSLOG_IDENTIFIER" {
-                print!("{}: ", kv[1]);
-            } else if kv [0] == "MESSAGE" {
-                println!("{}", kv[1]);
+            if data.payload.starts_with(b"SYSLOG_IDENTIFIER") {
+                std::io::stdout().write_all(&data.payload[18..]);
+            } else if data.payload.starts_with(b"MESSAGE") {
+                std::io::stdout().write_all(&data.payload[7..]);
+                std::io::stdout().write_all(b"\n");
             }
+
+            //let string = str::from_utf8(&data.payload).unwrap();
+            ////println!("string: {}", string);
+
+            //let kv: Vec<&str> = string.split("=").collect();
+            ////println!("kv: {:?}", kv);
+
+            //if kv[0] == "SYSLOG_IDENTIFIER" {
+            //    print!("{}: ", kv[1]);
+            //} else if kv [0] == "MESSAGE" {
+            //    println!("{}", kv[1]);
+            //}
         }
     }
 }
