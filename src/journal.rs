@@ -13,33 +13,49 @@ pub const OBJECT_COMPRESSED_MASK: u8 = OBJECT_COMPRESSED_XZ | OBJECT_COMPRESSED_
 
 pub const TAG_LENGTH: usize = (256 / 8);
 
+#[derive(PartialEq)]
+pub enum JournalState {
+    Offline,
+    Online,
+    Archived,
+    StateMax,
+}
+
 /// This trait guarantees an object that implements it can return it's
 /// own size.
 pub trait SizedObject {
     fn size(&self) -> u64;
 }
 
+/// Represents all the possible types of objects in a journal file.
 pub enum Object {
+    /// Holds the common object header for any object
     Object(ObjectHeader),
+    /// Holds data in the payload field
     Data(DataObject),
+    /// Holds the field name data, such as "_SYSTEMD_UNIT"
     Field(FieldObject),
+    /// Represents a log entry
     Entry(EntryObject),
+    /// A hash table with offsets to data and field objects
     HashTable(HashTableObject),
+    /// A hash table with offsets to data and field objects
     EntryArray(EntryArrayObject),
+    /// An object used to seal the journal from modification
     Tag(TagObject),
 }
 
 impl fmt::Display for Object {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-       match *self {
-           Object::Object(_) => write!(f, "Object header"),
-           Object::Data(_) => write!(f, "Data object"),
-           Object::Field(_) => write!(f, "Field object"),
-           Object::Entry(_) => write!(f, "Entry object"),
-           Object::HashTable(_) => write!(f, "HashTable object"),
-           Object::EntryArray(_) => write!(f, "Entry array object"),
-           Object::Tag(_) => write!(f, "Tag object"),
-       }
+        match *self {
+            Object::Object(_) => write!(f, "Object header"),
+            Object::Data(_) => write!(f, "Data object"),
+            Object::Field(_) => write!(f, "Field object"),
+            Object::Entry(_) => write!(f, "Entry object"),
+            Object::HashTable(_) => write!(f, "HashTable object"),
+            Object::EntryArray(_) => write!(f, "Entry array object"),
+            Object::Tag(_) => write!(f, "Tag object"),
+        }
     }
 }
 
@@ -67,9 +83,10 @@ pub enum ObjectType {
     ObjectFieldHashTable = 5,
     ObjectEntryArray = 6,
     ObjectTag = 7,
-    ObjectTypeMax
+    ObjectTypeMax,
 }
 
+/// The common object header for any object
 pub struct ObjectHeader {
     pub type_: ObjectType,
     pub flags: u8,
@@ -92,6 +109,12 @@ pub struct DataObject {
     pub entry_array_offset: u64,
     pub n_entries: u64,
     pub payload: Vec<u8>,
+}
+
+impl DataObject {
+    pub fn payload_is_trusted(&self) -> bool {
+        0x5f == self.payload[0]
+    }
 }
 
 pub struct FieldObject {
@@ -138,7 +161,7 @@ pub struct TagObject {
     pub object: ObjectHeader,
     pub seqnum: u64,
     pub epoch: u64,
-    pub tag: [u8; 256/8], /* SHA-256 HMAC */
+    pub tag: [u8; 256 / 8], /* SHA-256 HMAC */
 }
 
 pub union SdId128 {
@@ -161,7 +184,7 @@ pub struct JournalHeader {
     pub data_hash_table_offset: u64,
     pub data_hash_table_size: u64,
     pub field_hash_table_offset: u64,
-    pub field_hash_table_size : u64,
+    pub field_hash_table_size: u64,
     pub tail_object_offset: u64,
     pub n_objects: u64,
     pub n_entries: u64,

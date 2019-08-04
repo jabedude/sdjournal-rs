@@ -1,8 +1,9 @@
 #![feature(untagged_unions)]
-use std::io::Cursor;
-use std::str;
 use byteorder::{LittleEndian, ReadBytesExt};
-use std::io::{Read, Result, Error, ErrorKind, Seek, SeekFrom};
+use std::convert::TryInto;
+use std::io::Cursor;
+use std::io::{Error, ErrorKind, Read, Result, Seek, SeekFrom};
+use std::str;
 
 pub mod journal;
 pub use crate::journal::*;
@@ -70,7 +71,7 @@ fn load_header(file: &[u8]) -> Result<JournalHeader> {
         data_hash_table_offset: data_hash_table_offset,
         data_hash_table_size: data_hash_table_size,
         field_hash_table_offset: field_hash_table_offset,
-        field_hash_table_size : field_hash_table_size,
+        field_hash_table_size: field_hash_table_size,
         tail_object_offset: tail_object_offset,
         n_objects: n_objects,
         n_entries: n_entries,
@@ -119,7 +120,7 @@ pub fn get_obj_at_offset(file: &[u8], offset: u64) -> Result<Object> {
             let n_entries = file.read_u64::<LittleEndian>()?;
             let mut payload: Vec<u8> = vec![0u8; (size - 64) as usize];
             file.read_exact(&mut payload)?;
-            
+
             let data_object = DataObject {
                 object: obj_header,
                 hash: hash,
@@ -131,13 +132,13 @@ pub fn get_obj_at_offset(file: &[u8], offset: u64) -> Result<Object> {
                 payload: payload,
             };
             return Ok(Object::Data(data_object));
-        },
+        }
         2 => {
             let flags = file.read_u8()?;
             let mut reserved = [0u8; 6];
             file.read_exact(&mut reserved)?;
             let size = file.read_u64::<LittleEndian>()?;
-            let object_header = ObjectHeader{
+            let object_header = ObjectHeader {
                 type_: ObjectType::ObjectField,
                 flags: flags,
                 reserved: reserved,
@@ -157,13 +158,13 @@ pub fn get_obj_at_offset(file: &[u8], offset: u64) -> Result<Object> {
                 payload: payload,
             };
             return Ok(Object::Field(field_object));
-        },
+        }
         3 => {
             let flags = file.read_u8()?;
             let mut reserved = [0u8; 6];
             file.read_exact(&mut reserved)?;
             let size = file.read_u64::<LittleEndian>()?;
-            let object_header = ObjectHeader{
+            let object_header = ObjectHeader {
                 type_: ObjectType::ObjectEntry,
                 flags: flags,
                 reserved: reserved,
@@ -174,7 +175,8 @@ pub fn get_obj_at_offset(file: &[u8], offset: u64) -> Result<Object> {
             let monotonic = file.read_u64::<LittleEndian>()?;
             let boot_id = file.read_u128::<LittleEndian>()?;
             let xor_hash = file.read_u64::<LittleEndian>()?;
-            let mut items: Vec<EntryItem> = Vec::new();
+            let mut items: Vec<EntryItem> =
+                Vec::with_capacity(((size - 48) / 16).try_into().unwrap());
             for _ in 1..((size - 48) / 16) {
                 let object_offset = file.read_u64::<LittleEndian>()?;
                 let hash = file.read_u64::<LittleEndian>()?;
@@ -194,19 +196,20 @@ pub fn get_obj_at_offset(file: &[u8], offset: u64) -> Result<Object> {
                 items: items,
             };
             return Ok(Object::Entry(entry_object));
-        },
+        }
         4 => {
             let flags = file.read_u8()?;
             let mut reserved = [0u8; 6];
             file.read_exact(&mut reserved)?;
             let size = file.read_u64::<LittleEndian>()?;
-            let object_header = ObjectHeader{
+            let object_header = ObjectHeader {
                 type_: ObjectType::ObjectDataHashTable,
                 flags: flags,
                 reserved: reserved,
                 size: size,
             };
-            let mut items: Vec<HashItem> = Vec::new();
+            let mut items: Vec<HashItem> =
+                Vec::with_capacity(((size - 48) / 16).try_into().unwrap());
             for _ in 0..((size - 48) / 16) {
                 let hash_head_offset = file.read_u64::<LittleEndian>()?;
                 let tail_hash_offset = file.read_u64::<LittleEndian>()?;
@@ -221,19 +224,20 @@ pub fn get_obj_at_offset(file: &[u8], offset: u64) -> Result<Object> {
                 items: items,
             };
             return Ok(Object::HashTable(hash_table));
-        },
+        }
         5 => {
             let flags = file.read_u8()?;
             let mut reserved = [0u8; 6];
             file.read_exact(&mut reserved)?;
             let size = file.read_u64::<LittleEndian>()?;
-            let object_header = ObjectHeader{
+            let object_header = ObjectHeader {
                 type_: ObjectType::ObjectFieldHashTable,
                 flags: flags,
                 reserved: reserved,
                 size: size,
             };
-            let mut items: Vec<HashItem> = Vec::new();
+            let mut items: Vec<HashItem> =
+                Vec::with_capacity(((size - 48) / 16).try_into().unwrap());
             for _ in 0..((size - 48) / 16) {
                 let hash_head_offset = file.read_u64::<LittleEndian>()?;
                 let tail_hash_offset = file.read_u64::<LittleEndian>()?;
@@ -248,20 +252,20 @@ pub fn get_obj_at_offset(file: &[u8], offset: u64) -> Result<Object> {
                 items: items,
             };
             return Ok(Object::HashTable(hash_table));
-        },
+        }
         6 => {
             let flags = file.read_u8()?;
             let mut reserved = [0u8; 6];
             file.read_exact(&mut reserved)?;
             let size = file.read_u64::<LittleEndian>()?;
-            let object_header = ObjectHeader{
+            let object_header = ObjectHeader {
                 type_: ObjectType::ObjectEntryArray,
                 flags: flags,
                 reserved: reserved,
                 size: size,
             };
             let next_entry_array_offset = file.read_u64::<LittleEndian>()?;
-            let mut items: Vec<u64> = Vec::new();
+            let mut items: Vec<u64> = Vec::with_capacity(((size - 20) / 8).try_into().unwrap());
             for _ in 0..((size - 20) / 8) {
                 let item = file.read_u64::<LittleEndian>()?;
                 if item == 0u64 {
@@ -275,13 +279,13 @@ pub fn get_obj_at_offset(file: &[u8], offset: u64) -> Result<Object> {
                 items: items,
             };
             return Ok(Object::EntryArray(entry_array_object));
-        },
+        }
         7 => {
             let flags = file.read_u8()?;
             let mut reserved = [0u8; 6];
             file.read_exact(&mut reserved)?;
             let size = file.read_u64::<LittleEndian>()?;
-            let object_header = ObjectHeader{
+            let object_header = ObjectHeader {
                 type_: ObjectType::ObjectTag,
                 flags: flags,
                 reserved: reserved,
@@ -289,7 +293,7 @@ pub fn get_obj_at_offset(file: &[u8], offset: u64) -> Result<Object> {
             };
             let seqnum = file.read_u64::<LittleEndian>()?;
             let epoch = file.read_u64::<LittleEndian>()?;
-            let mut tag = [0u8; 256/8];
+            let mut tag = [0u8; 256 / 8];
             file.read_exact(&mut tag)?;
             let tag_object = TagObject {
                 object: object_header,
@@ -298,7 +302,7 @@ pub fn get_obj_at_offset(file: &[u8], offset: u64) -> Result<Object> {
                 tag: tag, /* SHA-256 HMAC */
             };
             return Ok(Object::Tag(tag_object));
-        },
+        }
         _ => return Err(Error::new(ErrorKind::Other, "Unused MAX Object")),
     }
 }
@@ -307,10 +311,19 @@ impl<'a> Journal<'a> {
     pub fn new(mut path: &'a [u8]) -> Result<Journal<'a>> {
         let header = load_header(&mut path)?;
 
-        Ok(Journal{
+        Ok(Journal {
             file: path,
             header: header,
         })
+    }
+
+    pub fn state(&self) -> JournalState {
+        match self.header.state {
+            0 => JournalState::Offline,
+            1 => JournalState::Online,
+            2 => JournalState::Archived,
+            _ => JournalState::StateMax,
+        }
     }
 
     pub fn header_iter<'b>(&'b self) -> ObjectHeaderIter<'b> {
@@ -323,7 +336,7 @@ impl<'a> Journal<'a> {
         ObjectIter::new(self.file, start)
     }
 
-    pub fn entry_iter<'b>(&'b self) -> EntryIter<'b> {
+    pub fn iter_entries<'b>(&'b self) -> EntryIter<'b> {
         let start = self.header.field_hash_table_offset - OBJECT_HEADER_SZ;
         let n_objects = self.header.n_objects;
         EntryIter::new(self.file, start, n_objects)
@@ -372,7 +385,6 @@ impl<'a> ObjectHeaderIter<'a> {
     }
 
     fn load_obj_header_at_offset(&mut self, offset: u64) -> Result<ObjectHeader> {
-
         if !is_valid64(offset) {
             return Err(Error::new(ErrorKind::Other, "Invalid offset"));
         }
@@ -390,7 +402,7 @@ impl<'a> ObjectHeaderIter<'a> {
             5 => ObjectType::ObjectFieldHashTable,
             6 => ObjectType::ObjectEntryArray,
             7 => ObjectType::ObjectTag,
-            _ => ObjectType::ObjectTypeMax
+            _ => ObjectType::ObjectTypeMax,
         };
 
         let flags = self.buf.read_u8()?;
@@ -398,7 +410,7 @@ impl<'a> ObjectHeaderIter<'a> {
         self.buf.read_exact(&mut reserved)?;
         let size = self.buf.read_u64::<LittleEndian>()?;
 
-        Ok(ObjectHeader{
+        Ok(ObjectHeader {
             type_: type_,
             flags: flags,
             reserved: reserved,
@@ -416,7 +428,7 @@ impl<'a> Iterator for ObjectHeaderIter<'a> {
             Ok(h) => {
                 self.next_offset = self.next_obj_header_offset(&h)?;
                 return Some(h);
-            },
+            }
             Err(_) => return None,
         }
     }
@@ -440,7 +452,6 @@ impl<'a> ObjectIter<'a> {
     }
 
     fn load_obj_at_offset(&mut self, offset: u64) -> Result<Object> {
-
         if !is_valid64(offset) {
             return Err(Error::new(ErrorKind::Other, "Invalid offset"));
         }
@@ -468,7 +479,7 @@ impl<'a> ObjectIter<'a> {
                 let n_entries = self.buf.read_u64::<LittleEndian>()?;
                 let mut payload: Vec<u8> = vec![0u8; (size - 64) as usize];
                 self.buf.read_exact(&mut payload)?;
-                
+
                 let data_object = DataObject {
                     object: obj_header,
                     hash: hash,
@@ -480,13 +491,13 @@ impl<'a> ObjectIter<'a> {
                     payload: payload,
                 };
                 return Ok(Object::Data(data_object));
-            },
+            }
             2 => {
                 let flags = self.buf.read_u8()?;
                 let mut reserved = [0u8; 6];
                 self.buf.read_exact(&mut reserved)?;
                 let size = self.buf.read_u64::<LittleEndian>()?;
-                let object_header = ObjectHeader{
+                let object_header = ObjectHeader {
                     type_: ObjectType::ObjectField,
                     flags: flags,
                     reserved: reserved,
@@ -506,13 +517,13 @@ impl<'a> ObjectIter<'a> {
                     payload: payload,
                 };
                 return Ok(Object::Field(field_object));
-            },
+            }
             3 => {
                 let flags = self.buf.read_u8()?;
                 let mut reserved = [0u8; 6];
                 self.buf.read_exact(&mut reserved)?;
                 let size = self.buf.read_u64::<LittleEndian>()?;
-                let object_header = ObjectHeader{
+                let object_header = ObjectHeader {
                     type_: ObjectType::ObjectEntry,
                     flags: flags,
                     reserved: reserved,
@@ -523,7 +534,8 @@ impl<'a> ObjectIter<'a> {
                 let monotonic = self.buf.read_u64::<LittleEndian>()?;
                 let boot_id = self.buf.read_u128::<LittleEndian>()?;
                 let xor_hash = self.buf.read_u64::<LittleEndian>()?;
-                let mut items: Vec<EntryItem> = Vec::new();
+                let mut items: Vec<EntryItem> =
+                    Vec::with_capacity(((size - 48) / 16).try_into().unwrap());
                 for _ in 1..((size - 48) / 16) {
                     let object_offset = self.buf.read_u64::<LittleEndian>()?;
                     let hash = self.buf.read_u64::<LittleEndian>()?;
@@ -543,19 +555,20 @@ impl<'a> ObjectIter<'a> {
                     items: items,
                 };
                 return Ok(Object::Entry(entry_object));
-            },
+            }
             4 => {
                 let flags = self.buf.read_u8()?;
                 let mut reserved = [0u8; 6];
                 self.buf.read_exact(&mut reserved)?;
                 let size = self.buf.read_u64::<LittleEndian>()?;
-                let object_header = ObjectHeader{
+                let object_header = ObjectHeader {
                     type_: ObjectType::ObjectDataHashTable,
                     flags: flags,
                     reserved: reserved,
                     size: size,
                 };
-                let mut items: Vec<HashItem> = Vec::new();
+                let mut items: Vec<HashItem> =
+                    Vec::with_capacity(((size - 48) / 16).try_into().unwrap());
                 for _ in 0..((size - 48) / 16) {
                     let hash_head_offset = self.buf.read_u64::<LittleEndian>()?;
                     let tail_hash_offset = self.buf.read_u64::<LittleEndian>()?;
@@ -570,19 +583,20 @@ impl<'a> ObjectIter<'a> {
                     items: items,
                 };
                 return Ok(Object::HashTable(hash_table));
-            },
+            }
             5 => {
                 let flags = self.buf.read_u8()?;
                 let mut reserved = [0u8; 6];
                 self.buf.read_exact(&mut reserved)?;
                 let size = self.buf.read_u64::<LittleEndian>()?;
-                let object_header = ObjectHeader{
+                let object_header = ObjectHeader {
                     type_: ObjectType::ObjectFieldHashTable,
                     flags: flags,
                     reserved: reserved,
                     size: size,
                 };
-                let mut items: Vec<HashItem> = Vec::new();
+                let mut items: Vec<HashItem> =
+                    Vec::with_capacity(((size - 48) / 16).try_into().unwrap());
                 for _ in 0..((size - 48) / 16) {
                     let hash_head_offset = self.buf.read_u64::<LittleEndian>()?;
                     let tail_hash_offset = self.buf.read_u64::<LittleEndian>()?;
@@ -597,20 +611,20 @@ impl<'a> ObjectIter<'a> {
                     items: items,
                 };
                 return Ok(Object::HashTable(hash_table));
-            },
+            }
             6 => {
                 let flags = self.buf.read_u8()?;
                 let mut reserved = [0u8; 6];
                 self.buf.read_exact(&mut reserved)?;
                 let size = self.buf.read_u64::<LittleEndian>()?;
-                let object_header = ObjectHeader{
+                let object_header = ObjectHeader {
                     type_: ObjectType::ObjectEntryArray,
                     flags: flags,
                     reserved: reserved,
                     size: size,
                 };
                 let next_entry_array_offset = self.buf.read_u64::<LittleEndian>()?;
-                let mut items: Vec<u64> = Vec::new();
+                let mut items: Vec<u64> = Vec::with_capacity(((size - 20) / 8).try_into().unwrap());
                 for _ in 0..((size - 20) / 8) {
                     let item = self.buf.read_u64::<LittleEndian>()?;
                     if item == 0u64 {
@@ -624,13 +638,13 @@ impl<'a> ObjectIter<'a> {
                     items: items,
                 };
                 return Ok(Object::EntryArray(entry_array_object));
-            },
+            }
             7 => {
                 let flags = self.buf.read_u8()?;
                 let mut reserved = [0u8; 6];
                 self.buf.read_exact(&mut reserved)?;
                 let size = self.buf.read_u64::<LittleEndian>()?;
-                let object_header = ObjectHeader{
+                let object_header = ObjectHeader {
                     type_: ObjectType::ObjectTag,
                     flags: flags,
                     reserved: reserved,
@@ -638,7 +652,7 @@ impl<'a> ObjectIter<'a> {
                 };
                 let seqnum = self.buf.read_u64::<LittleEndian>()?;
                 let epoch = self.buf.read_u64::<LittleEndian>()?;
-                let mut tag = [0u8; 256/8];
+                let mut tag = [0u8; 256 / 8];
                 self.buf.read_exact(&mut tag)?;
                 let tag_object = TagObject {
                     object: object_header,
@@ -647,7 +661,7 @@ impl<'a> ObjectIter<'a> {
                     tag: tag, /* SHA-256 HMAC */
                 };
                 return Ok(Object::Tag(tag_object));
-            },
+            }
             _ => return Err(Error::new(ErrorKind::Other, "Unused MAX Object")),
         }
     }
@@ -670,7 +684,7 @@ impl<'a> Iterator for ObjectIter<'a> {
             Ok(o) => {
                 self.next_offset = self.next_obj_offset(&o)?;
                 return Some(o);
-            },
+            }
             Err(_) => {
                 return None;
             }
@@ -708,8 +722,10 @@ impl<'a> Iterator for EntryArrayIter<'a> {
                 if let Object::EntryArray(ea) = h {
                     self.current_offset = ea.next_entry_array_offset;
                     return Some(ea);
-                } else { return None; }
-            },
+                } else {
+                    return None;
+                }
+            }
             Err(_) => return None,
         }
     }
@@ -730,7 +746,7 @@ impl<'a> EntryIter<'a> {
     }
 }
 
-impl<'a> Iterator for EntryIter <'a> {
+impl<'a> Iterator for EntryIter<'a> {
     type Item = EntryObject;
 
     fn next(&mut self) -> Option<EntryObject> {

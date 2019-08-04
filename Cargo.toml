@@ -1,5 +1,5 @@
 [package]
-name = "journald-rust"
+name = "journalctl-rust"
 version = "0.2.0"
 authors = ["Josh Abraham <sinisterpatrician@gmail.com>"]
 edition = "2018"
@@ -18,6 +18,7 @@ byteorder = "1.3.1"
 memmap = "0.7.0"
 libc = "0.2.49"
 xz2 = "0.1.6"
+chrono = "0.4.7"
 
 [dev-dependencies]
 criterion = "0.2"
