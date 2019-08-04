@@ -5,9 +5,9 @@ extern crate lazy_static;
 
 use criterion::Criterion;
 use journald::*;
-use std::fs::File;
-use std::cell::Cell;
 use memmap::Mmap;
+use std::cell::Cell;
+use std::fs::File;
 
 lazy_static! {
     static ref FILE: File = File::open("tests/user-1000.journal").unwrap();
@@ -58,11 +58,21 @@ fn test_obj_header_iter_user(cur: &[u8]) {
 }
 
 fn criterion_benchmark(c: &mut Criterion) {
-    c.bench_function("test_object_iter_user", |b| b.iter(|| test_object_iter_user(&BUF)));
-    c.bench_function("test_iter_entries_user", |b| b.iter(|| test_iter_entries_user(&BUF)));
-    c.bench_function("test_obj_header_iter_user", |b| b.iter(|| test_obj_header_iter_user(&BUF)));
-    c.bench_function("test_retrieve_data", |b| b.iter(|| test_retrieve_data(&BUF)));
-    c.bench_function("test_iter_entries_new_api_user", |b| b.iter(|| test_iter_entries_new_api_user(&BUF)));
+    c.bench_function("test_object_iter_user", |b| {
+        b.iter(|| test_object_iter_user(&BUF))
+    });
+    c.bench_function("test_iter_entries_user", |b| {
+        b.iter(|| test_iter_entries_user(&BUF))
+    });
+    c.bench_function("test_obj_header_iter_user", |b| {
+        b.iter(|| test_obj_header_iter_user(&BUF))
+    });
+    c.bench_function("test_retrieve_data", |b| {
+        b.iter(|| test_retrieve_data(&BUF))
+    });
+    c.bench_function("test_iter_entries_new_api_user", |b| {
+        b.iter(|| test_iter_entries_new_api_user(&BUF))
+    });
 }
 
 criterion_group!(benches, criterion_benchmark);

@@ -1,8 +1,8 @@
 #[cfg(test)]
 mod tests {
-use journald::*;
-use std::fs::File;
-use memmap::Mmap;
+    use journald::*;
+    use memmap::Mmap;
+    use std::fs::File;
 
     #[test]
     fn test_journal_state_offline() {
@@ -42,7 +42,7 @@ use memmap::Mmap;
 
     #[test]
     fn test_hash_object() {
-    use journald::hash::rhash64;
+        use journald::hash::rhash64;
 
         let file = File::open("tests/user-1000.journal").unwrap();
         let mmap = unsafe { Mmap::map(&file).expect("mmap err") };
@@ -59,7 +59,6 @@ use memmap::Mmap;
 
     #[test]
     fn test_object_iter_user() {
-
         let file = File::open("tests/user-1000.journal").unwrap();
         let mmap = unsafe { Mmap::map(&file).expect("mmap err") };
         let buf = &*mmap;
@@ -79,7 +78,6 @@ use memmap::Mmap;
 
     #[test]
     fn test_iter_entries_user() {
-
         let file = File::open("tests/user-1000.journal").unwrap();
         let mmap = unsafe { Mmap::map(&file).expect("mmap err") };
         let buf = &*mmap;
@@ -95,7 +93,6 @@ use memmap::Mmap;
 
     #[test]
     fn test_multi_iter_user() {
-
         let file = File::open("tests/user-1000.journal").unwrap();
         let mmap = unsafe { Mmap::map(&file).expect("mmap err") };
         let buf = &*mmap;
@@ -152,7 +149,6 @@ use memmap::Mmap;
 
     #[test]
     fn test_object_iter_system() {
-
         let file = File::open("tests/system.journal").unwrap();
         let mmap = unsafe { Mmap::map(&file).expect("mmap err") };
         let buf = &*mmap;
@@ -168,7 +164,6 @@ use memmap::Mmap;
 
     #[test]
     fn test_iter_entries_system() {
-
         let file = File::open("tests/system.journal").unwrap();
         let mmap = unsafe { Mmap::map(&file).expect("mmap err") };
         let buf = &*mmap;
@@ -184,7 +179,6 @@ use memmap::Mmap;
 
     #[test]
     fn test_entry_array_iter_user() {
-
         let file = File::open("tests/user-1000.journal").unwrap();
         let mmap = unsafe { Mmap::map(&file).expect("mmap err") };
         let buf = &*mmap;
