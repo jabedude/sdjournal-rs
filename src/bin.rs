@@ -26,6 +26,8 @@ fn main() -> Result<(), Error> {
     let buf = &*mmap;
     let journal = Journal::new(buf)?;
 
+    println!("{}", journal.header);
+
     //Iterate over all entry objects
     for ent in journal.iter_entries() {
         let d = UNIX_EPOCH + Duration::from_micros(ent.realtime);
