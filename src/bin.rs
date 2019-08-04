@@ -38,7 +38,9 @@ fn main() -> Result<(), Error> {
                 _ => continue,
             };
 
-            if data.payload.starts_with(b"SYSLOG_IDENTIFIER") {
+            if data.payload.starts_with(b"_HOSTNAME=") {
+                std::io::stdout().write_all(&data.payload[10..])?;
+            } else if data.payload.starts_with(b"SYSLOG_IDENTIFIER") {
                 std::io::stdout().write_all(&data.payload[18..])?;
             } else if data.payload.starts_with(b"MESSAGE") {
                 std::io::stdout().write_all(&data.payload[7..])?;
