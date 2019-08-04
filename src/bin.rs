@@ -57,17 +57,6 @@ fn main() {
                 std::io::stdout().write_all(b"\n");
             }
 
-            //let string = str::from_utf8(&data.payload).unwrap();
-            ////println!("string: {}", string);
-
-            //let kv: Vec<&str> = string.split("=").collect();
-            ////println!("kv: {:?}", kv);
-
-            //if kv[0] == "SYSLOG_IDENTIFIER" {
-            //    print!("{}: ", kv[1]);
-            //} else if kv [0] == "MESSAGE" {
-            //    println!("{}", kv[1]);
-            //}
         }
     }
 }
