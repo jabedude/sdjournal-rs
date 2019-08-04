@@ -173,7 +173,7 @@ pub struct JournalHeader {
     pub signature: [u8; 8],
     pub compatible_flags: u32,
     pub incompatible_flags: u32,
-    pub state: u8,
+    pub state: JournalState,
     pub reserved: [u8; 7],
     pub file_id: u128,
     pub machine_id: u128,

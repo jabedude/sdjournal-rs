@@ -30,6 +30,12 @@ fn load_header(file: &[u8]) -> Result<JournalHeader> {
     let compatible_flags = file.read_u32::<LittleEndian>()?;
     let incompatible_flags = file.read_u32::<LittleEndian>()?;
     let state = file.read_u8()?;
+    let state = match state {
+        0 => JournalState::Offline,
+        1 => JournalState::Online,
+        2 => JournalState::Archived,
+        _ => JournalState::StateMax,
+    };
     let mut reserved = [0u8; 7];
     file.read_exact(&mut reserved)?;
     let file_id = file.read_u128::<LittleEndian>()?;
@@ -315,15 +321,6 @@ impl<'a> Journal<'a> {
             file: path,
             header: header,
         })
-    }
-
-    pub fn state(&self) -> JournalState {
-        match self.header.state {
-            0 => JournalState::Offline,
-            1 => JournalState::Online,
-            2 => JournalState::Archived,
-            _ => JournalState::StateMax,
-        }
     }
 
     pub fn header_iter<'b>(&'b self) -> ObjectHeaderIter<'b> {

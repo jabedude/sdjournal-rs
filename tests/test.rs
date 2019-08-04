@@ -10,7 +10,7 @@ mod tests {
         let mmap = unsafe { Mmap::map(&file).expect("mmap err") };
         let buf = &*mmap;
         let journal = Journal::new(buf).unwrap();
-        assert!(journal.state() == JournalState::Offline);
+        assert!(journal.header.state == JournalState::Offline);
     }
 
     #[test]
