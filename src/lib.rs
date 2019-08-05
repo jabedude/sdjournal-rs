@@ -6,8 +6,10 @@ use std::io::{Error, ErrorKind, Read, Result, Seek, SeekFrom};
 use std::str;
 
 pub mod journal;
-pub use crate::journal::*;
 pub mod hash;
+mod traits;
+pub use crate::journal::*;
+use crate::traits::SizedObject;
 
 fn is_valid64(u: u64) -> bool {
     u & 7 == 0

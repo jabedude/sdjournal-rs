@@ -1,5 +1,7 @@
 use std::fmt;
 
+use crate::traits::SizedObject;
+
 // TODO: compression support
 // TODO: work on entrt struct to allow for propper formatting of entries
 
@@ -30,12 +32,6 @@ impl fmt::Display for JournalState {
             JournalState::StateMax => write!(f, "MAX"),
         }
     }
-}
-
-/// This trait guarantees an object that implements it can return it's
-/// own size.
-pub trait SizedObject {
-    fn size(&self) -> u64;
 }
 
 /// Represents all the possible types of objects in a journal file.
