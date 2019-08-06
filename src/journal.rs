@@ -15,7 +15,7 @@ pub const OBJECT_COMPRESSED_MASK: u8 = OBJECT_COMPRESSED_XZ | OBJECT_COMPRESSED_
 
 pub const TAG_LENGTH: usize = (256 / 8);
 
-#[derive(PartialEq)]
+#[derive(Debug, PartialEq)]
 pub enum JournalState {
     Offline,
     Online,
