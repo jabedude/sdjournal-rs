@@ -3,7 +3,7 @@ mod tests {
     use journald::*;
     use memmap::Mmap;
     use std::fs::File;
-    use pretty_assertions::{assert_eq, assert_ne};
+    use pretty_assertions::assert_eq;
 
     #[test]
     fn test_journal_state_offline() {
