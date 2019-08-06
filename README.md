@@ -1,5 +1,7 @@
 # jctl-rust
 
+![alt text](https://rustacean.net/assets/rustacean-flat-happy.png "Rust Logo!")
+
 ## Usage: 
 
 Command line:
