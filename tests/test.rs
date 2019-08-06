@@ -21,12 +21,29 @@ mod tests {
         let buf = &*mmap;
         let journal = Journal::new(buf).unwrap();
         assert_eq!(journal.header.header_size, 240);
+        assert_eq!(journal.header.state, JournalState::Offline);
         assert_eq!(journal.header.arena_size, 8388368);
         assert_eq!(journal.header.data_hash_table_size, 233016);
         assert_eq!(journal.header.field_hash_table_size, 333);
         assert_eq!(journal.header.n_objects, 2123);
         assert_eq!(journal.header.n_entries, 645);
         assert_eq!(journal.header.n_entry_arrays, 595);
+    }
+
+    #[test]
+    fn test_header_parsing_system() {
+        let file = File::open("tests/system.journal").unwrap();
+        let mmap = unsafe { Mmap::map(&file).expect("mmap err") };
+        let buf = &*mmap;
+        let journal = Journal::new(buf).unwrap();
+        assert_eq!(journal.header.header_size, 240);
+        assert_eq!(journal.header.arena_size, 41942800);
+        assert_eq!(journal.header.state, JournalState::Offline);
+        assert_eq!(journal.header.data_hash_table_size, 233016);
+        assert_eq!(journal.header.field_hash_table_size, 333);
+        assert_eq!(journal.header.n_objects, 52245);
+        assert_eq!(journal.header.n_entries, 40600);
+        assert_eq!(journal.header.n_entry_arrays, 10739);
     }
 
     #[test]
