@@ -11,6 +11,11 @@ mod traits;
 pub use crate::journal::*;
 use crate::traits::SizedObject;
 
+pub struct Journal<'a> {
+    pub file: &'a [u8],
+    pub header: JournalHeader,
+}
+
 fn is_valid64(u: u64) -> bool {
     u & 7 == 0
 }
@@ -23,79 +28,6 @@ impl ObjectHeader {
     pub fn is_compressed(&self) -> bool {
         self.flags & OBJECT_COMPRESSED_MASK != 0
     }
-}
-
-fn load_header(file: &[u8]) -> Result<JournalHeader> {
-    let mut file = Cursor::new(file);
-    let mut signature = [0u8; 8];
-    file.read_exact(&mut signature)?;
-    let compatible_flags = file.read_u32::<LittleEndian>()?;
-    let incompatible_flags = file.read_u32::<LittleEndian>()?;
-    let state = file.read_u8()?;
-    let state = match state {
-        0 => JournalState::Offline,
-        1 => JournalState::Online,
-        2 => JournalState::Archived,
-        _ => JournalState::StateMax,
-    };
-    let mut reserved = [0u8; 7];
-    file.read_exact(&mut reserved)?;
-    let file_id = file.read_u128::<LittleEndian>()?;
-    let machine_id = file.read_u128::<LittleEndian>()?;
-    let boot_id = file.read_u128::<LittleEndian>()?;
-    let seqnum_id = file.read_u128::<LittleEndian>()?;
-    let header_size = file.read_u64::<LittleEndian>()?;
-    let arena_size = file.read_u64::<LittleEndian>()?;
-    let data_hash_table_offset = file.read_u64::<LittleEndian>()?;
-    let data_hash_table_size = file.read_u64::<LittleEndian>()?;
-    let field_hash_table_offset = file.read_u64::<LittleEndian>()?;
-    let field_hash_table_size = file.read_u64::<LittleEndian>()?;
-    let tail_object_offset = file.read_u64::<LittleEndian>()?;
-    let n_objects = file.read_u64::<LittleEndian>()?;
-    let n_entries = file.read_u64::<LittleEndian>()?;
-    let tail_entry_seqnum = file.read_u64::<LittleEndian>()?;
-    let head_entry_seqnum = file.read_u64::<LittleEndian>()?;
-    let entry_array_offset = file.read_u64::<LittleEndian>()?;
-    let head_entry_realtime = file.read_u64::<LittleEndian>()?;
-    let tail_entry_realtime = file.read_u64::<LittleEndian>()?;
-    let tail_entry_monotonic = file.read_u64::<LittleEndian>()?;
-    let n_data = file.read_u64::<LittleEndian>()?;
-    let n_fields = file.read_u64::<LittleEndian>()?;
-    let n_tags = file.read_u64::<LittleEndian>()?;
-    let n_entry_arrays = file.read_u64::<LittleEndian>()?;
-
-    Ok(JournalHeader {
-        signature: signature,
-        compatible_flags: compatible_flags,
-        incompatible_flags: incompatible_flags,
-        state: state,
-        reserved: reserved,
-        file_id: file_id,
-        machine_id: machine_id,
-        boot_id: boot_id,
-        seqnum_id: seqnum_id,
-        header_size: header_size,
-        arena_size: arena_size,
-        data_hash_table_offset: data_hash_table_offset,
-        data_hash_table_size: data_hash_table_size,
-        field_hash_table_offset: field_hash_table_offset,
-        field_hash_table_size: field_hash_table_size,
-        tail_object_offset: tail_object_offset,
-        n_objects: n_objects,
-        n_entries: n_entries,
-        tail_entry_seqnum: tail_entry_seqnum,
-        head_entry_seqnum: head_entry_seqnum,
-        entry_array_offset: entry_array_offset,
-        head_entry_realtime: head_entry_realtime,
-        tail_entry_realtime: tail_entry_realtime,
-        tail_entry_monotonic: tail_entry_monotonic,
-        /* Added in 187 */
-        n_data: n_data,
-        n_fields: n_fields,
-        /* Added in 189 */
-        n_tags: n_tags,
-        n_entry_arrays: n_entry_arrays,
-    })
 }
 
 pub fn get_obj_at_offset(file: &[u8], offset: u64) -> Result<Object> {
@@ -317,7 +249,7 @@ pub fn get_obj_at_offset(file: &[u8], offset: u64) -> Result<Object> {
 
 impl<'a> Journal<'a> {
     pub fn new(mut path: &'a [u8]) -> Result<Journal<'a>> {
-        let header = load_header(&mut path)?;
+        let header = JournalHeader::new(&mut path)?;
 
         Ok(Journal {
             file: path,
