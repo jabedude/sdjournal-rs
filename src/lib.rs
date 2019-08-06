@@ -16,10 +16,12 @@ pub struct Journal<'a> {
     pub header: JournalHeader,
 }
 
+#[inline(always)]
 fn is_valid64(u: u64) -> bool {
     u & 7 == 0
 }
 
+#[inline(always)]
 fn align64(u: u64) -> u64 {
     (u + 7u64) & !7u64
 }
