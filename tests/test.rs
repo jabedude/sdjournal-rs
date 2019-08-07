@@ -52,7 +52,7 @@ mod tests {
         let mmap = unsafe { Mmap::map(&file).expect("mmap err") };
         let buf = &*mmap;
         let journal = Journal::new(buf).unwrap();
-        let obj_iter = journal.header_iter();
+        let obj_iter = journal.iter_headers();
         for oh in obj_iter {
             assert!(!oh.is_compressed());
         }
@@ -115,7 +115,7 @@ mod tests {
         let mmap = unsafe { Mmap::map(&file).expect("mmap err") };
         let buf = &*mmap;
         let journal = Journal::new(buf).unwrap();
-        let hdr_iter = journal.header_iter();
+        let hdr_iter = journal.iter_headers();
         for oh in hdr_iter {
             if oh.type_ == ObjectType::ObjectData {
                 println!("type: {:?} size: {}", oh.type_, oh.size);
@@ -130,13 +130,13 @@ mod tests {
     }
 
     #[test]
-    fn test_object_header_iter_user() {
+    fn test_object_iter_headers_user() {
         let file = File::open("tests/user-1000.journal").unwrap();
         let mmap = unsafe { Mmap::map(&file).expect("mmap err") };
         let buf = &*mmap;
         let journal = Journal::new(buf).unwrap();
         let expected = journal.header.n_objects;
-        let obj_iter = journal.header_iter();
+        let obj_iter = journal.iter_headers();
         let mut counter = 0;
         for oh in obj_iter {
             if oh.type_ == ObjectType::ObjectData {
@@ -148,13 +148,13 @@ mod tests {
     }
 
     #[test]
-    fn test_object_header_iter_system() {
+    fn test_object_iter_headers_system() {
         let file = File::open("tests/system.journal").unwrap();
         let mmap = unsafe { Mmap::map(&file).expect("mmap err") };
         let buf = &*mmap;
         let journal = Journal::new(buf).unwrap();
         let expected = journal.header.n_objects;
-        let obj_iter = journal.header_iter();
+        let obj_iter = journal.iter_headers();
         let mut counter = 0;
         for oh in obj_iter {
             if oh.type_ == ObjectType::ObjectData {

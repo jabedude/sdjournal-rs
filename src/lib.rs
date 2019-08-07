@@ -260,7 +260,8 @@ impl<'a> Journal<'a> {
         })
     }
 
-    pub fn header_iter<'b>(&'b self) -> ObjectHeaderIter<'b> {
+    /// Iterate over all header objects in journal
+    pub fn iter_headers<'b>(&'b self) -> ObjectHeaderIter<'b> {
         let start = self.header.field_hash_table_offset - OBJECT_HEADER_SZ;
         ObjectHeaderIter::new(self.file, start)
     }
@@ -270,6 +271,7 @@ impl<'a> Journal<'a> {
         ObjectIter::new(self.file, start)
     }
 
+    /// Iterate over all entry objects in the journal
     pub fn iter_entries<'b>(&'b self) -> EntryIter<'b> {
         let start = self.header.field_hash_table_offset - OBJECT_HEADER_SZ;
         let n_objects = self.header.n_objects;

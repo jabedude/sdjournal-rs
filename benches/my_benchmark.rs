@@ -49,9 +49,9 @@ fn test_iter_entries_new_api_user(cur: &[u8]) {
     }
 }
 
-fn test_obj_header_iter_user(cur: &[u8]) {
+fn test_obj_iter_headers_user(cur: &[u8]) {
     let journal = Journal::new(cur).unwrap();
-    let objheader_iter = journal.header_iter();
+    let objheader_iter = journal.iter_headers();
     for _oh in objheader_iter {
         let _e = 0;
     }
@@ -64,8 +64,8 @@ fn criterion_benchmark(c: &mut Criterion) {
     c.bench_function("test_iter_entries_user", |b| {
         b.iter(|| test_iter_entries_user(&BUF))
     });
-    c.bench_function("test_obj_header_iter_user", |b| {
-        b.iter(|| test_obj_header_iter_user(&BUF))
+    c.bench_function("test_obj_iter_headers_user", |b| {
+        b.iter(|| test_obj_iter_headers_user(&BUF))
     });
     c.bench_function("test_retrieve_data", |b| {
         b.iter(|| test_retrieve_data(&BUF))
