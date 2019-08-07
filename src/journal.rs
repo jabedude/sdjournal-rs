@@ -112,18 +112,29 @@ impl SizedObject for ObjectHeader {
     }
 }
 
+/// Data objects have the actual data in the payload field
 pub struct DataObject {
+    /// The object header
     pub object: ObjectHeader,
+    /// A hash of the payload
     pub hash: u64,
+    /// Used in cases of hash collisions
     pub next_hash_offset: u64,
+    /// Links data objects with the same field
     pub next_field_offset: u64,
+    /// An offset to the first entry object referencing this data
     pub entry_offset: u64,
+    /// An offset to an array object with offsets to other entries that point to this data
     pub entry_array_offset: u64,
+    /// Count of entry objects that point to this object
     pub n_entries: u64,
+    /// The field and data. Possibly compressed if object header indicates.
     pub payload: Vec<u8>,
 }
 
 impl DataObject {
+    /// Returns true if data object payload was added by by the journal and 
+    /// cannot be altered by client code
     pub fn payload_is_trusted(&self) -> bool {
         0x5f == self.payload[0]
     }
@@ -143,12 +154,18 @@ pub struct EntryItem {
     pub hash: u64,
 }
 
+/// Represents one log entry
 pub struct EntryObject {
     pub object: ObjectHeader,
+    /// Sequence number of the entry
     pub seqnum: u64,
+    /// Realtime timestamp
     pub realtime: u64,
+    /// Timestamp for the boot
     pub monotonic: u64,
+    /// Boot id the monotonic timestamp refers to
     pub boot_id: u128,
+    /// Binary XOR of the hashes of the payload of all DATA objects in the entry
     pub xor_hash: u64,
     pub items: Vec<EntryItem>,
 }
