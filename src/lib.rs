@@ -27,6 +27,7 @@ fn align64(u: u64) -> u64 {
 }
 
 impl ObjectHeader {
+    // possible FIXME: is this accurate?
     pub fn is_compressed(&self) -> bool {
         self.flags & OBJECT_COMPRESSED_MASK != 0
     }
