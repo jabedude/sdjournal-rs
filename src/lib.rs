@@ -611,7 +611,7 @@ impl<'a> Iterator for ObjectIter<'a> {
     type Item = Object;
 
     fn next(&mut self) -> Option<Object> {
-        let object = self.load_obj_at_offset(self.next_offset);
+        let object = get_obj_at_offset(self.buf.get_ref(), self.next_offset);
         self.current_offset = self.next_offset;
         self.buf.seek(SeekFrom::Start(self.current_offset)).unwrap();
         match object {
