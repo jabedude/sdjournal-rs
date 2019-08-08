@@ -1,5 +1,7 @@
 /* Slightly modified by Lennart Poettering, to avoid name clashes, and
- * unexport a few functions. */
+ * unexport a few functions. 
+ * Josh Abraham: removed dead code, only keeping hashlittle2 for 
+ * hashing journal objects */
 
 #include "lookup3.h"
 
