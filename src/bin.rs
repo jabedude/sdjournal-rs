@@ -1,27 +1,32 @@
 use chrono::prelude::DateTime;
 use chrono::Utc;
+use clap::{Arg, App};
 use journald::*;
 use memmap::Mmap;
-use std::env;
 use std::fs::File;
-use std::io::{Error, ErrorKind, Write};
+use std::io::{Error, Write};
 use std::time::{Duration, UNIX_EPOCH};
 
 // TODO: work on entrt struct to allow for propper formatting of entries
 
 fn main() -> Result<(), Error> {
-    let args: Vec<String> = env::args().collect();
 
-    // TODO: going to need to handle command line flags...
-    if args.len() != 2 {
-        println!("Usage: {} <journal file>", args[0]);
-        return Err(Error::new(
-            ErrorKind::InvalidInput,
-            "Needs at least one argument",
-        ));
-    }
+    let matches = App::new("journalctl-rs")
+                          .version("0.1")
+                          .author("Joshua A. <j.abraham1776@gmail.com>")
+                          .about("Journalctl clone in rust")
+                          .arg(Arg::with_name("INPUT")
+                               .help("Sets the journal file to use")
+                               .required(true)
+                               .index(1))
+                          .arg(Arg::with_name("v")
+                               .short("v")
+                               .multiple(true)
+                               .help("Sets the level of verbosity"))
+                          .get_matches();
 
-    let file = File::open(&args[1])?;
+
+    let file = File::open(matches.value_of("INPUT").unwrap())?;
     let mmap = unsafe { Mmap::map(&file).expect("mmap err") };
     let buf = &*mmap;
     let journal = Journal::new(buf)?;
