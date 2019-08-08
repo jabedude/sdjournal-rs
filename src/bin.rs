@@ -19,6 +19,9 @@ fn main() -> Result<(), Error> {
                                .help("Sets the journal file to use")
                                .required(true)
                                .index(1))
+                          .arg(Arg::with_name("header")
+                                .long("header")
+                               .help("Print info in the journal header"))
                           .arg(Arg::with_name("v")
                                .short("v")
                                .multiple(true)
@@ -31,7 +34,10 @@ fn main() -> Result<(), Error> {
     let buf = &*mmap;
     let journal = Journal::new(buf)?;
 
-    println!("{}", journal.header);
+    if matches.is_present("header") {
+        println!("{}", journal.header);
+        return Ok(());
+    }
 
     //Iterate over all entry objects
     for ent in journal.iter_entries() {
