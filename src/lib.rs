@@ -251,6 +251,7 @@ pub fn get_obj_at_offset(file: &[u8], offset: u64) -> Result<Object> {
 }
 
 impl<'a> Journal<'a> {
+    // TODO: add verify() method
     pub fn new(mut path: &'a [u8]) -> Result<Journal<'a>> {
         let header = JournalHeader::new(&mut path)?;
 
