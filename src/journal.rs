@@ -173,6 +173,7 @@ pub struct EntryObject {
 pub struct EntryArrayObject {
     pub object: ObjectHeader,
     pub next_entry_array_offset: u64,
+    // TODO: think about creating an offset type?
     pub items: Vec<u64>,
 }
 
