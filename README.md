@@ -2,6 +2,12 @@
 
 ![alt text](https://rustacean.net/assets/rustacean-flat-happy.png "Rust Logo!")
 
+## Goals:
+
+1. To be able to handle corrupted journal files
+
+2. To (hopefully) be faster than journalctl with large journal files
+
 ## Usage: 
 
 Command line:
