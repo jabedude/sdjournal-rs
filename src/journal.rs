@@ -315,7 +315,7 @@ impl fmt::Display for JournalHeader {
             Arena size: {}\nData Hash Table Size: {}\nField Hash Table Size: {}\n\
             Head Sequential Number: {}\nTail Sequential Number: {}\nHead Realtime Timestamp: {}\n\
             Tail Realtime Timestamp: {}\nTail Monotonic Timestamp: {}\nObjects: {}\nEntry Objects: {}\n\
-            Data Objects: {}\nField Objects: {}\nTag Objects: {}\nEntry Array Objects: {}\n",
+            Data Objects: {}\nField Objects: {}\nTag Objects: {}\nEntry Array Objects: {}",
             self.file_id, self.machine_id, self.boot_id, self.seqnum_id, self.state, self.compatible_flags,
             self.incompatible_flags, self.header_size, self.arena_size, self.data_hash_table_size,
             self.field_hash_table_size, self.head_entry_seqnum, self.tail_entry_seqnum, self.head_entry_realtime,
