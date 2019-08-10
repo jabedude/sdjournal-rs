@@ -235,7 +235,7 @@ mod tests {
     }
 
     #[test]
-    fn test_verify_data_objects_user() {
+    fn test_hash_data_objects_user() {
         use journald::traits::HashableObject;
 
         let file = File::open("tests/user-1000.journal").unwrap();
