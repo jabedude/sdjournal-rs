@@ -41,8 +41,6 @@ impl fmt::Display for JournalState {
 
 /// Represents all the possible types of objects in a journal file.
 pub enum Object {
-    /// Holds the common object header for any object
-    Object(ObjectHeader),
     /// Holds data in the payload field
     Data(DataObject),
     /// Holds the field name data, such as "_SYSTEMD_UNIT"
@@ -60,7 +58,6 @@ pub enum Object {
 impl fmt::Display for Object {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match *self {
-            Object::Object(_) => write!(f, "Object header"),
             Object::Data(_) => write!(f, "Data object"),
             Object::Field(_) => write!(f, "Field object"),
             Object::Entry(_) => write!(f, "Entry object"),
@@ -74,7 +71,6 @@ impl fmt::Display for Object {
 impl SizedObject for Object {
     fn size(&self) -> u64 {
         match self {
-            Object::Object(o) => return o.size,
             Object::Data(d) => return d.object.size,
             Object::Field(f) => return f.object.size,
             Object::Entry(e) => return e.object.size,
