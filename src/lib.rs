@@ -4,6 +4,7 @@ use std::convert::TryInto;
 use std::io::Cursor;
 use std::io::{Error, ErrorKind, Read, Result, Seek, SeekFrom};
 use std::str;
+use std::collections::VecDeque;
 
 pub mod journal;
 pub mod hash;
@@ -274,7 +275,7 @@ impl<'a> Journal<'a> {
 
     /// Iterate over all entry objects in the journal
     pub fn iter_entries<'b>(&'b self) -> EntryIter<'b> {
-        let start = self.header.field_hash_table_offset - OBJECT_HEADER_SZ;
+        let start = self.header.entry_array_offset;
         let n_objects = self.header.n_objects;
         EntryIter::new(self.file, start, n_objects)
     }
@@ -669,16 +670,27 @@ impl<'a> Iterator for EntryArrayIter<'a> {
 }
 
 pub struct EntryIter<'a> {
+    buf: Cursor<&'a [u8]>,
     n_objects: u64,
-    inner: ObjectIter<'a>,
+    offsets: VecDeque<u64>,
 }
 
 impl<'a> EntryIter<'a> {
     fn new(buf: &'a [u8], start: u64, n_objects: u64) -> EntryIter<'a> {
-        let inner = ObjectIter::new(buf, start);
+        let ea_iter = EntryArrayIter::new(buf, start);
+        let buf = Cursor::new(buf);
+
+        let mut offsets: VecDeque<u64> = VecDeque::with_capacity(n_objects.try_into().unwrap());
+        for entry_array in ea_iter {
+            for offset in entry_array.items {
+                offsets.push_back(offset);
+            }
+        }
+
         EntryIter {
+            buf: buf,
             n_objects: n_objects,
-            inner: inner,
+            offsets: offsets,
         }
     }
 }
@@ -687,12 +699,12 @@ impl<'a> Iterator for EntryIter<'a> {
     type Item = EntryObject;
 
     fn next(&mut self) -> Option<EntryObject> {
-        for _ in 0..self.n_objects {
-            let obj = self.inner.next()?;
-            if let Object::Entry(e) = obj {
-                return Some(e);
-            }
+        let offset = self.offsets.pop_front()?;
+        let entry = get_obj_at_offset(&self.buf.get_ref(), offset).unwrap();
+        if let Object::Entry(e) = entry {
+            return Some(e);
+        } else {
+            return None;
         }
-        None
     }
 }
