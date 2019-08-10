@@ -179,6 +179,17 @@ pub struct EntryObject {
     pub items: Vec<EntryItem>,
 }
 
+impl HashableObject for EntryObject {
+    fn hash(&self) -> u64 {
+        // TODO: use for_each here?
+        let mut xor_hash: u64 = 0;
+        for item in &self.items {
+            xor_hash = xor_hash ^ item.hash;
+        }
+        xor_hash
+    }
+}
+
 pub struct EntryArrayObject {
     pub object: ObjectHeader,
     pub next_entry_array_offset: u64,
