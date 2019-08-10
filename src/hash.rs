@@ -9,13 +9,16 @@ pub fn rhash64(data: &[u8]) -> u64 {
     return ret;
 }
 
-// TODO: add real tests
+// TODO: add more tests
 #[cfg(test)]
 mod tests {
     use super::*;
 
     #[test]
-    fn test_hash() {
-        assert_eq!(0, 0);
+    fn test_hash_field_obj_payload() {
+        let payload = b"_SOURCE_MONOTONIC_TIMESTAMP";
+        let expected = 306791107295704799;
+        let calc = rhash64(payload);
+        assert_eq!(expected, calc);
     }
 }
