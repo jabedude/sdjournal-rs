@@ -233,4 +233,22 @@ mod tests {
             }
         }
     }
+
+    #[test]
+    fn test_verify_data_objects_user() {
+        use journald::traits::HashableObject;
+
+        let file = File::open("tests/user-1000.journal").unwrap();
+        let mmap = unsafe { Mmap::map(&file).expect("mmap err") };
+        let buf = &*mmap;
+        let journal = Journal::new(buf).unwrap();
+
+        for obj in journal.obj_iter() {
+            if let Object::Data(d) = obj {
+                let stored_hash = d.hash;
+                let calc_hash = d.hash();
+                assert_eq!(stored_hash, calc_hash);
+            }
+        }
+    }
 }
