@@ -681,6 +681,7 @@ impl<'a> EntryIter<'a> {
         let buf = Cursor::new(buf);
 
         let mut offsets: VecDeque<u64> = VecDeque::with_capacity(n_objects.try_into().unwrap());
+        // TODO: see if pushing entire vector will boost perf
         for entry_array in ea_iter {
             for offset in entry_array.items {
                 offsets.push_back(offset);
