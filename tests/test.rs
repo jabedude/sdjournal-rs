@@ -290,4 +290,20 @@ mod tests {
             }
         }
     }
+
+    #[test]
+    fn test_hash_entry_objects_user() {
+        use journald::traits::HashableObject;
+
+        let file = File::open("tests/user-1000.journal").unwrap();
+        let mmap = unsafe { Mmap::map(&file).expect("mmap err") };
+        let buf = &*mmap;
+        let journal = Journal::new(buf).unwrap();
+
+        for entry in journal.iter_entries() {
+            let stored_hash = entry.xor_hash;
+            let calc_hash = entry.hash();
+            assert_eq!(stored_hash, calc_hash);
+        }
+    }
 }
