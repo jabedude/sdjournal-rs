@@ -39,7 +39,7 @@ fn main() -> Result<(), Error> {
         return Ok(());
     }
 
-    //Iterate over all entry objects
+    // Iterate over all entry objects
     for ent in journal.iter_entries() {
         let d = UNIX_EPOCH + Duration::from_micros(ent.realtime);
         let datetime = DateTime::<Utc>::from(d);
