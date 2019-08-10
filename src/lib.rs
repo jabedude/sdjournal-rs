@@ -7,7 +7,7 @@ use std::str;
 
 pub mod journal;
 pub mod hash;
-mod traits;
+pub mod traits;
 pub use crate::journal::*;
 use crate::traits::SizedObject;
 

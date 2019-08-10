@@ -9,11 +9,13 @@ pub fn rhash64(data: &[u8]) -> u64 {
     return ret;
 }
 
-// TODO: fix this to run on `cargo test`
+// TODO: add real tests
 #[cfg(test)]
 mod tests {
+    use super::*;
+
     #[test]
     fn test_hash() {
-        assert!(true);
+        assert_eq!(0, 0);
     }
 }

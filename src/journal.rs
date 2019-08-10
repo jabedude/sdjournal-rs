@@ -3,7 +3,8 @@ use std::fmt;
 use std::io::Cursor;
 use std::io::{Read, Result};
 
-use crate::traits::SizedObject;
+use crate::traits::{SizedObject, HashableObject};
+use crate::hash::rhash64;
 
 // TODO: compression support
 // TODO: work on entrt struct to allow for propper formatting of entries
@@ -133,6 +134,12 @@ impl DataObject {
     /// cannot be altered by client code
     pub fn payload_is_trusted(&self) -> bool {
         0x5f == self.payload[0]
+    }
+}
+
+impl HashableObject for DataObject {
+    fn hash(&self) -> u64 {
+        rhash64(&self.payload)
     }
 }
 
