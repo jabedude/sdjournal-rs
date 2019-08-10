@@ -90,7 +90,7 @@ pub fn get_obj_at_offset(file: &[u8], offset: u64) -> Result<Object> {
             let hash = file.read_u64::<LittleEndian>()?;
             let next_hash_offset = file.read_u64::<LittleEndian>()?;
             let head_data_offset = file.read_u64::<LittleEndian>()?;
-            let mut payload: Vec<u8> = vec![0u8; (size - 24) as usize];
+            let mut payload: Vec<u8> = vec![0u8; (size - 40) as usize];
             file.read_exact(&mut payload)?;
 
             let field_object = FieldObject {
@@ -443,7 +443,7 @@ impl<'a> ObjectIter<'a> {
                 let hash = self.buf.read_u64::<LittleEndian>()?;
                 let next_hash_offset = self.buf.read_u64::<LittleEndian>()?;
                 let head_data_offset = self.buf.read_u64::<LittleEndian>()?;
-                let mut payload: Vec<u8> = vec![0u8; (size - 24) as usize];
+                let mut payload: Vec<u8> = vec![0u8; (size - 40) as usize];
                 self.buf.read_exact(&mut payload)?;
 
                 let field_object = FieldObject {

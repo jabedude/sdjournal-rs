@@ -151,6 +151,12 @@ pub struct FieldObject {
     pub payload: Vec<u8>,
 }
 
+impl HashableObject for FieldObject {
+    fn hash(&self) -> u64 {
+        rhash64(&self.payload)
+    }
+}
+
 #[derive(Debug, PartialEq)]
 pub struct EntryItem {
     pub object_offset: u64,

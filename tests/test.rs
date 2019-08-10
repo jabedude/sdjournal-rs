@@ -251,4 +251,43 @@ mod tests {
             }
         }
     }
+
+    #[test]
+    fn test_hash_field_objects_user() {
+        use journald::traits::HashableObject;
+
+        let file = File::open("tests/user-1000.journal").unwrap();
+        let mmap = unsafe { Mmap::map(&file).expect("mmap err") };
+        let buf = &*mmap;
+        let journal = Journal::new(buf).unwrap();
+
+        for obj in journal.obj_iter() {
+            if let Object::Field(f) = obj {
+                let stored_hash = f.hash;
+                let calc_hash = f.hash();
+                assert_eq!(stored_hash, calc_hash);
+            }
+        }
+    }
+
+    #[test]
+    fn test_hash_field_objects_system() {
+        use journald::traits::HashableObject;
+
+        let file = File::open("tests/system.journal").unwrap();
+        let mmap = unsafe { Mmap::map(&file).expect("mmap err") };
+        let buf = &*mmap;
+        let journal = Journal::new(buf).unwrap();
+
+        for obj in journal.obj_iter() {
+            if let Object::Field(f) = obj {
+                println!("payload: {:?}", &f.payload);
+                println!("obj header size: {}, payload vec size: {}, payload len should be: {}",
+                                                f.object.size, f.payload.len(), f.object.size - 35);
+                let stored_hash = f.hash;
+                let calc_hash = f.hash();
+                assert_eq!(stored_hash, calc_hash);
+            }
+        }
+    }
 }
