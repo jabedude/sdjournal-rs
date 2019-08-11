@@ -253,7 +253,7 @@ pub fn get_obj_at_offset(file: &[u8], offset: u64) -> Result<Object> {
 }
 
 impl<'a> Journal<'a> {
-    pub fn new(mut path: &'a [u8]) -> Result<Journal<'a>> {
+    pub fn from_bytes(mut path: &'a [u8]) -> Result<Journal<'a>> {
         let header = JournalHeader::new(&mut path)?;
 
         Ok(Journal {

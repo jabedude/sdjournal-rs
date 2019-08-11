@@ -35,7 +35,7 @@ fn main() -> Result<(), Error> {
     let file = File::open(matches.value_of("INPUT").unwrap())?;
     let mmap = unsafe { Mmap::map(&file).expect("mmap err") };
     let buf = &*mmap;
-    let journal = Journal::new(buf)?;
+    let journal = Journal::from_bytes(buf)?;
 
     if matches.is_present("header") {
         println!("{}", journal.header);

@@ -16,7 +16,7 @@ lazy_static! {
 }
 
 fn test_retrieve_data(cur: &[u8]) {
-    let journal = Journal::new(cur).unwrap();
+    let journal = Journal::from_bytes(cur).unwrap();
     let iter_entries = journal.iter_entries();
     for entry in iter_entries {
         entry.get_data("MESSAGE", cur);
@@ -24,7 +24,7 @@ fn test_retrieve_data(cur: &[u8]) {
 }
 
 fn test_object_iter_user(cur: &[u8]) {
-    let journal = Journal::new(cur).unwrap();
+    let journal = Journal::from_bytes(cur).unwrap();
     let mut obj_iter = journal.obj_iter();
     for _obj in obj_iter {
         let _e = 0;
@@ -32,7 +32,7 @@ fn test_object_iter_user(cur: &[u8]) {
 }
 
 fn test_iter_entries_user(cur: &[u8]) {
-    let journal = Journal::new(cur).unwrap();
+    let journal = Journal::from_bytes(cur).unwrap();
     let iter_entries = journal.iter_entries();
     for _entry in iter_entries {
         let _e = 0;
@@ -40,7 +40,7 @@ fn test_iter_entries_user(cur: &[u8]) {
 }
 
 fn test_iter_entries_new_api_user(cur: &[u8]) {
-    let journal = Journal::new(cur).unwrap();
+    let journal = Journal::from_bytes(cur).unwrap();
     let ea_iter = journal.ea_iter();
     for ea in ea_iter {
         for entry in ea.items {
@@ -50,7 +50,7 @@ fn test_iter_entries_new_api_user(cur: &[u8]) {
 }
 
 fn test_obj_iter_headers_user(cur: &[u8]) {
-    let journal = Journal::new(cur).unwrap();
+    let journal = Journal::from_bytes(cur).unwrap();
     let objheader_iter = journal.iter_headers();
     for _oh in objheader_iter {
         let _e = 0;
