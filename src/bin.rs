@@ -22,6 +22,9 @@ fn main() -> Result<(), Error> {
                           .arg(Arg::with_name("header")
                                 .long("header")
                                .help("Print info in the journal header"))
+                          .arg(Arg::with_name("verify")
+                                .long("verify")
+                               .help("Verify journal file consistency"))
                           .arg(Arg::with_name("v")
                                .short("v")
                                .multiple(true)
@@ -36,6 +39,11 @@ fn main() -> Result<(), Error> {
 
     if matches.is_present("header") {
         println!("{}", journal.header);
+        return Ok(());
+    }
+
+    if matches.is_present("verify") {
+        println!("Journal verificatoin: {}", journal.verify());
         return Ok(());
     }
 
