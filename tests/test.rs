@@ -316,6 +316,6 @@ mod tests {
         let buf = &*mmap;
         let journal = Journal::new(buf).unwrap();
 
-        assert!(journal.verify());
+        assert_eq!(journal.verify(), true);
     }
 }
