@@ -10,7 +10,7 @@ pub mod journal;
 pub mod hash;
 pub mod traits;
 pub use crate::journal::*;
-use crate::traits::SizedObject;
+use crate::traits::{SizedObject, HashableObject};
 
 pub struct Journal<'a> {
     pub file: &'a [u8],
@@ -252,7 +252,6 @@ pub fn get_obj_at_offset(file: &[u8], offset: u64) -> Result<Object> {
 }
 
 impl<'a> Journal<'a> {
-    // TODO: add verify() method
     pub fn new(mut path: &'a [u8]) -> Result<Journal<'a>> {
         let header = JournalHeader::new(&mut path)?;
 
@@ -283,6 +282,21 @@ impl<'a> Journal<'a> {
     pub fn ea_iter<'b>(&'b self) -> EntryArrayIter<'b> {
         let start = self.header.entry_array_offset;
         EntryArrayIter::new(self.file, start)
+    }
+
+    // TODO: add more tests in verify
+    pub fn verify(&self) -> bool {
+        for obj in self.obj_iter() {
+            if let Object::Data(d) = obj {
+                let stored_hash = d.hash;
+                let calc_hash = d.hash();
+                if stored_hash != calc_hash {
+                    return false;
+                }
+            }
+        }
+
+        true
     }
 }
 

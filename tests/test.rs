@@ -309,9 +309,17 @@ mod tests {
 
     #[test]
     fn test_journal_verify_user() {
-        use journald::traits::HashableObject;
-
         let file = File::open("tests/user-1000.journal").unwrap();
+        let mmap = unsafe { Mmap::map(&file).expect("mmap err") };
+        let buf = &*mmap;
+        let journal = Journal::new(buf).unwrap();
+
+        assert_eq!(journal.verify(), true);
+    }
+
+    #[test]
+    fn test_journal_verify_system() {
+        let file = File::open("tests/system.journal").unwrap();
         let mmap = unsafe { Mmap::map(&file).expect("mmap err") };
         let buf = &*mmap;
         let journal = Journal::new(buf).unwrap();
