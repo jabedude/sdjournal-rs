@@ -286,21 +286,36 @@ impl<'a> Journal<'a> {
     }
 
     // TODO: add more tests in verify
-    pub fn verify(&self) -> bool {
-        let bar = ProgressBar::new(self.header.n_objects);
+    pub fn verify(&self, display_bar: bool) -> bool {
+        match display_bar {
+            true => {
+                let bar = ProgressBar::new(self.header.n_objects);
 
-        for obj in self.obj_iter() {
-            bar.inc(1);
-            if let Object::Data(d) = obj {
-                let stored_hash = d.hash;
-                let calc_hash = d.hash();
-                if stored_hash != calc_hash {
-                    return false;
+                for obj in self.obj_iter() {
+                    bar.inc(1);
+                    if let Object::Data(d) = obj {
+                        let stored_hash = d.hash;
+                        let calc_hash = d.hash();
+                        if stored_hash != calc_hash {
+                            return false;
+                        }
+                    }
                 }
-            }
-        }
 
-        bar.finish();
+                bar.finish();
+            },
+            false => {
+                for obj in self.obj_iter() {
+                    if let Object::Data(d) = obj {
+                        let stored_hash = d.hash;
+                        let calc_hash = d.hash();
+                        if stored_hash != calc_hash {
+                            return false;
+                        }
+                    }
+                }
+            },
+        }
         true
     }
 }
