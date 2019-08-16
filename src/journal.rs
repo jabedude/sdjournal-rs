@@ -7,6 +7,7 @@ use crate::traits::{SizedObject, HashableObject};
 use crate::hash::rhash64;
 
 // TODO: compression support
+// TODO: Result/Error type
 // TODO: work on entrt struct to allow for propper formatting of entries
 
 /// Code relating to the jounral structure goes here.
@@ -20,6 +21,8 @@ pub const OBJECT_COMPRESSED_LZ4: u8 = 1 << 1;
 pub const OBJECT_COMPRESSED_MASK: u8 = OBJECT_COMPRESSED_XZ | OBJECT_COMPRESSED_LZ4;
 
 pub const TAG_LENGTH: usize = (256 / 8);
+
+pub type ObjectOffset = u64;
 
 #[derive(Debug, PartialEq)]
 pub enum JournalState {
@@ -194,7 +197,7 @@ pub struct EntryArrayObject {
     pub object: ObjectHeader,
     pub next_entry_array_offset: u64,
     // TODO: think about creating an offset type?
-    pub items: Vec<u64>,
+    pub items: Vec<ObjectOffset>,
 }
 
 pub struct HashItem {
@@ -211,7 +214,7 @@ pub struct TagObject {
     pub object: ObjectHeader,
     pub seqnum: u64,
     pub epoch: u64,
-    pub tag: [u8; 256 / 8], /* SHA-256 HMAC */
+    pub tag: [u8; TAG_LENGTH], /* SHA-256 HMAC */
 }
 
 pub union SdId128 {
