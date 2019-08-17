@@ -8,6 +8,8 @@
 
 2. To (hopefully) be faster than journalctl with large journal files
 
+3. Maybe? contibute upstream
+
 ## Usage: 
 
 Command line:
