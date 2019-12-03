@@ -1,6 +1,6 @@
 #[cfg(test)]
 mod tests {
-    use journald::*;
+    use sdjournal::*;
     use memmap::Mmap;
     use std::fs::File;
     use pretty_assertions::assert_eq;
@@ -36,6 +36,8 @@ mod tests {
         let mmap = unsafe { Mmap::map(&file).expect("mmap err") };
         let buf = &*mmap;
         let journal = Journal::from_bytes(buf).unwrap();
+        assert_eq!(journal.header.file_id, 0xf5c61067f7f64d32963ef8770ad232e6);
+        assert_eq!(journal.header.machine_id, 0xc48110828c69477cb6be61e3601f532f);
         assert_eq!(journal.header.header_size, 240);
         assert_eq!(journal.header.arena_size, 41942800);
         assert_eq!(journal.header.state, JournalState::Offline);
@@ -60,7 +62,7 @@ mod tests {
 
     #[test]
     fn test_hash_object() {
-        use journald::hash::rhash64;
+        use sdjournal::hash::rhash64;
 
         let file = File::open("tests/user-1000.journal").unwrap();
         let mmap = unsafe { Mmap::map(&file).expect("mmap err") };
@@ -236,7 +238,7 @@ mod tests {
 
     #[test]
     fn test_hash_data_objects_user() {
-        use journald::traits::HashableObject;
+        use sdjournal::traits::HashableObject;
 
         let file = File::open("tests/user-1000.journal").unwrap();
         let mmap = unsafe { Mmap::map(&file).expect("mmap err") };
@@ -254,7 +256,7 @@ mod tests {
 
     #[test]
     fn test_hash_field_objects_user() {
-        use journald::traits::HashableObject;
+        use sdjournal::traits::HashableObject;
 
         let file = File::open("tests/user-1000.journal").unwrap();
         let mmap = unsafe { Mmap::map(&file).expect("mmap err") };
@@ -272,7 +274,7 @@ mod tests {
 
     #[test]
     fn test_hash_field_objects_system() {
-        use journald::traits::HashableObject;
+        use sdjournal::traits::HashableObject;
 
         let file = File::open("tests/system.journal").unwrap();
         let mmap = unsafe { Mmap::map(&file).expect("mmap err") };
@@ -293,7 +295,7 @@ mod tests {
 
     #[test]
     fn test_hash_entry_objects_user() {
-        use journald::traits::HashableObject;
+        use sdjournal::traits::HashableObject;
 
         let file = File::open("tests/user-1000.journal").unwrap();
         let mmap = unsafe { Mmap::map(&file).expect("mmap err") };

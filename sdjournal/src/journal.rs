@@ -1,4 +1,4 @@
-use byteorder::{LittleEndian, ReadBytesExt};
+use byteorder::{BigEndian, LittleEndian, ReadBytesExt};
 use std::fmt;
 use std::io::Cursor;
 use std::io::{Read, Result};
@@ -271,10 +271,10 @@ impl JournalHeader {
         };
         let mut reserved = [0u8; 7];
         file.read_exact(&mut reserved)?;
-        let file_id = file.read_u128::<LittleEndian>()?;
-        let machine_id = file.read_u128::<LittleEndian>()?;
-        let boot_id = file.read_u128::<LittleEndian>()?;
-        let seqnum_id = file.read_u128::<LittleEndian>()?;
+        let file_id = file.read_u128::<BigEndian>()?;
+        let machine_id = file.read_u128::<BigEndian>()?;
+        let boot_id = file.read_u128::<BigEndian>()?;
+        let seqnum_id = file.read_u128::<BigEndian>()?;
         let header_size = file.read_u64::<LittleEndian>()?;
         let arena_size = file.read_u64::<LittleEndian>()?;
         let data_hash_table_offset = file.read_u64::<LittleEndian>()?;
@@ -333,7 +333,7 @@ impl JournalHeader {
 impl fmt::Display for JournalHeader {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let out = format!(
-            "File ID: {:x}\nMachine ID: {:x}\nBoot ID: {}\nSequential Number ID: {}\
+            "File ID: {:x}\nMachine ID: {:x}\nBoot ID: {:x}\nSequential Number ID: {:x}\n
             State: {}\nCompatible Flags: {}\nIncompatible Flags: {}\nHeader size: {}\n\
             Arena size: {}\nData Hash Table Size: {}\nField Hash Table Size: {}\n\
             Head Sequential Number: {}\nTail Sequential Number: {}\nHead Realtime Timestamp: {}\n\
