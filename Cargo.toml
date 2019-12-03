@@ -3,7 +3,6 @@ name = "journalctl-rust"
 version = "0.2.0"
 authors = ["Josh Abraham <sinisterpatrician@gmail.com>"]
 edition = "2018"
-build = "build.rs"
 
 [lib]
 name = "journald"
@@ -29,6 +28,3 @@ pretty_assertions = "0.6.1"
 [[bench]]
 name = "my_benchmark"
 harness = false
-
-[build-dependencies]
-cc = "1.0"
