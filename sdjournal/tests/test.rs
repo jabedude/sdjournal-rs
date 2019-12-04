@@ -1,6 +1,6 @@
 #[cfg(test)]
 mod tests {
-    use sdjournal::*;
+    use sdjournal::journal::*;
     use memmap::Mmap;
     use std::fs::File;
     use pretty_assertions::assert_eq;
