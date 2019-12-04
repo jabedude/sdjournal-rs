@@ -43,7 +43,7 @@ fn main() -> Result<(), Error> {
     }
 
     if matches.is_present("verify") {
-        println!("Journal verification: {}", journal.verify(true));
+        println!("Journal verification: {}", journal.verify());
         return Ok(());
     }
 
