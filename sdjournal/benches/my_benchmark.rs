@@ -4,7 +4,7 @@ extern crate criterion;
 extern crate lazy_static;
 
 use criterion::Criterion;
-use journald::*;
+use sdjournal::*;
 use memmap::Mmap;
 use std::cell::Cell;
 use std::fs::File;
