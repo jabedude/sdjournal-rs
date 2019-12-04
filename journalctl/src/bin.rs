@@ -1,7 +1,7 @@
 use chrono::prelude::DateTime;
 use chrono::Utc;
 use clap::{Arg, App};
-use sdjournal::*;
+use sdjournal::journal::*;
 use memmap::Mmap;
 use std::fs::File;
 use std::io::{Error, Write};
