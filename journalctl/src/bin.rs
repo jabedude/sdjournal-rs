@@ -31,7 +31,7 @@ fn main() -> Result<(), Error> {
                           .get_matches();
 
     let mut file = File::open(matches.value_of("INPUT").expect("input missing"))?;
-    let journal = Journal::new(&mut file)?;
+    let journal = Journal::new(file)?;
 
     if matches.is_present("header") {
         println!("{}", journal.header);

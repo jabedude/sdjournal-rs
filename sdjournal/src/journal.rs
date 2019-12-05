@@ -1,7 +1,7 @@
 use byteorder::{BigEndian, LittleEndian, ReadBytesExt};
 use std::fmt;
 use std::str;
-use std::io::{Error, ErrorKind, Read, Result, Seek, SeekFrom};
+use std::io::{Cursor, Error, ErrorKind, Read, Result, Seek, SeekFrom};
 use std::convert::TryInto;
 
 use crate::iter::*;
@@ -36,20 +36,26 @@ pub(crate) fn align64(u: u64) -> u64 {
     (u + 7u64) & !7u64
 }
 
-pub struct Journal<'a, T>
+#[derive(Debug)]
+pub struct Journal<T>
 where
-    &'a T: Read + Seek,
+    T: Read + Seek,
 {
-    pub file: &'a T,
+    pub file: T,
     pub header: JournalHeader,
 }
 
-impl<'a, T> Journal<'a, T>
+impl<'a, T: 'a> Journal<T>
 where
+    T: Read + Seek,
     &'a T: Read + Seek,
 {
-    pub fn new(bytes: &'a T) -> Result<Journal<'a, T>> {
-        let header = JournalHeader::new(bytes)?;
+    pub fn new(mut bytes: T) -> Result<Journal<T>> {
+        let mut header_buf = vec![0; 240];
+        bytes.read_exact(&mut header_buf)?;
+        let header_buf = Cursor::new(header_buf);
+
+        let header = JournalHeader::new(header_buf)?;
 
         Ok(Journal {
             file: bytes,
@@ -57,31 +63,31 @@ where
         })
     }
 
-    pub fn obj_iter(&self) -> ObjectIter<'a, T> {
+    pub fn obj_iter(&'a self) -> ObjectIter<'a, T> {
         let start = self.header.field_hash_table_offset - OBJECT_HEADER_SZ;
-        ObjectIter::new(self.file, start)
+        ObjectIter::new(&self.file, start)
     }
 
     /// Iterate over all header objects in journal
-    pub fn iter_headers(&self) -> ObjectHeaderIter<'a, T> {
+    pub fn iter_headers(&'a self) -> ObjectHeaderIter<'a, T> {
         let start = self.header.field_hash_table_offset - OBJECT_HEADER_SZ;
-        ObjectHeaderIter::new(self.file, start)
+        ObjectHeaderIter::new(&self.file, start)
     }
 
     /// Iterate over all entry objects in the journal
-    pub fn iter_entries(&self) -> EntryIter<'a, T> {
+    pub fn iter_entries(&'a self) -> EntryIter<'a, T> {
         let start = self.header.entry_array_offset;
         let n_objects = self.header.n_objects;
-        EntryIter::new(self.file, start, n_objects)
+        EntryIter::new(&self.file, start, n_objects)
     }
 
-    pub fn ea_iter(&self) -> EntryArrayIter<'a, T> {
+    pub fn ea_iter(&'a self) -> EntryArrayIter<'a, T> {
         let start = self.header.entry_array_offset;
-        EntryArrayIter::new(self.file, start)
+        EntryArrayIter::new(&self.file, start)
     }
 
     // TODO: add more tests in verify
-    pub fn verify(&self) -> bool {
+    pub fn verify(&'a self) -> bool {
         for obj in self.obj_iter() {
             if let Object::Data(d) = obj {
                 let stored_hash = d.hash;
@@ -579,8 +585,9 @@ pub struct JournalHeader {
 }
 
 impl JournalHeader {
-    pub fn new<T: Read + Seek>(mut file: T) -> Result<JournalHeader> {
-        //let mut file = Cursor::new(file);
+    pub fn new<T>(mut file: T) -> Result<JournalHeader>
+    where T: Read + Seek, 
+    {
         let mut signature = [0u8; 8];
         file.read_exact(&mut signature)?;
         let compatible_flags = file.read_u32::<LittleEndian>()?;
@@ -653,7 +660,26 @@ impl JournalHeader {
     }
 }
 
-impl fmt::Display for JournalHeader {
+impl<'a> fmt::Display for JournalHeader {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let out = format!(
+            "File ID: {:x}\nMachine ID: {:x}\nBoot ID: {:x}\nSequential Number ID: {:x}\n
+            State: {}\nCompatible Flags: {}\nIncompatible Flags: {}\nHeader size: {}\n\
+            Arena size: {}\nData Hash Table Size: {}\nField Hash Table Size: {}\n\
+            Head Sequential Number: {}\nTail Sequential Number: {}\nHead Realtime Timestamp: {}\n\
+            Tail Realtime Timestamp: {}\nTail Monotonic Timestamp: {}\nObjects: {}\nEntry Objects: {}\n\
+            Data Objects: {}\nField Objects: {}\nTag Objects: {}\nEntry Array Objects: {}",
+            self.file_id, self.machine_id, self.boot_id, self.seqnum_id, self.state, self.compatible_flags,
+            self.incompatible_flags, self.header_size, self.arena_size, self.data_hash_table_size,
+            self.field_hash_table_size, self.head_entry_seqnum, self.tail_entry_seqnum, self.head_entry_realtime,
+            self.tail_entry_realtime, self.tail_entry_monotonic, self.n_objects, self.n_entries, self.n_fields,
+            self.n_data, self.n_tags, self.n_entry_arrays
+        );
+        write!(f, "{}", out)
+    }
+}
+
+impl<'a> fmt::Debug for JournalHeader {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let out = format!(
             "File ID: {:x}\nMachine ID: {:x}\nBoot ID: {:x}\nSequential Number ID: {:x}\n
