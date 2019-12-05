@@ -1,8 +1,7 @@
 use chrono::prelude::DateTime;
 use chrono::Utc;
 use clap::{Arg, App};
-use sdjournal::*;
-use memmap::Mmap;
+use sdjournal::journal::*;
 use std::fs::File;
 use std::io::{Error, Write};
 use std::time::{Duration, UNIX_EPOCH};
@@ -31,11 +30,8 @@ fn main() -> Result<(), Error> {
                                .help("Sets the level of verbosity"))
                           .get_matches();
 
-
-    let file = File::open(matches.value_of("INPUT").unwrap())?;
-    let mmap = unsafe { Mmap::map(&file).expect("mmap err") };
-    let buf = &*mmap;
-    let journal = Journal::from_bytes(buf)?;
+    let mut file = File::open(matches.value_of("INPUT").expect("input missing"))?;
+    let journal = Journal::new(&mut file)?;
 
     if matches.is_present("header") {
         println!("{}", journal.header);
@@ -55,7 +51,7 @@ fn main() -> Result<(), Error> {
         print!("{} ", datetime.format("%b %d %H:%M:%S"));
 
         for obj in ent.items {
-            let data = match get_obj_at_offset(buf, obj.object_offset)? {
+            let data = match obj.item {
                 Object::Data(d) => d,
                 _ => continue,
             };

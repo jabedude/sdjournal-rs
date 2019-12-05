@@ -1,8 +1,10 @@
 use byteorder::{BigEndian, LittleEndian, ReadBytesExt};
 use std::fmt;
-use std::io::Cursor;
-use std::io::{Read, Result};
+use std::str;
+use std::io::{Error, ErrorKind, Read, Result, Seek, SeekFrom};
+use std::convert::TryInto;
 
+use crate::iter::*;
 use crate::traits::{SizedObject, HashableObject};
 use crate::hash::rhash64;
 
@@ -24,6 +26,296 @@ pub const TAG_LENGTH: usize = (256 / 8);
 
 pub type ObjectOffset = u64;
 
+#[inline(always)]
+pub(crate) fn is_valid64(u: u64) -> bool {
+    u & 7 == 0
+}
+
+#[inline(always)]
+pub(crate) fn align64(u: u64) -> u64 {
+    (u + 7u64) & !7u64
+}
+
+pub struct Journal<'a, T>
+where
+    &'a T: Read + Seek,
+{
+    pub file: &'a T,
+    pub header: JournalHeader,
+}
+
+impl<'a, T> Journal<'a, T>
+where
+    &'a T: Read + Seek,
+{
+    pub fn new(bytes: &'a T) -> Result<Journal<'a, T>> {
+        let header = JournalHeader::new(bytes)?;
+
+        Ok(Journal {
+            file: bytes,
+            header: header,
+        })
+    }
+
+    pub fn obj_iter(&self) -> ObjectIter<'a, T> {
+        let start = self.header.field_hash_table_offset - OBJECT_HEADER_SZ;
+        ObjectIter::new(self.file, start)
+    }
+
+    /// Iterate over all header objects in journal
+    pub fn iter_headers(&self) -> ObjectHeaderIter<'a, T> {
+        let start = self.header.field_hash_table_offset - OBJECT_HEADER_SZ;
+        ObjectHeaderIter::new(self.file, start)
+    }
+
+    /// Iterate over all entry objects in the journal
+    pub fn iter_entries(&self) -> EntryIter<'a, T> {
+        let start = self.header.entry_array_offset;
+        let n_objects = self.header.n_objects;
+        EntryIter::new(self.file, start, n_objects)
+    }
+
+    pub fn ea_iter(&self) -> EntryArrayIter<'a, T> {
+        let start = self.header.entry_array_offset;
+        EntryArrayIter::new(self.file, start)
+    }
+
+    // TODO: add more tests in verify
+    pub fn verify(&self) -> bool {
+        for obj in self.obj_iter() {
+            if let Object::Data(d) = obj {
+                let stored_hash = d.hash;
+                let calc_hash = d.hash();
+                if stored_hash != calc_hash {
+                    return false;
+                }
+            }
+        }
+        true
+    }
+}
+
+pub fn get_obj_at_offset<T: Read + Seek>(file: &mut T, offset: u64) -> Result<Object> {
+    //let mut file = Cursor::new(file);
+
+    if !is_valid64(offset) {
+        return Err(Error::new(ErrorKind::Other, "Invalid offset"));
+    }
+
+    file.seek(SeekFrom::Start(offset))?;
+    let type_ = file.read_u8()?;
+    match type_ {
+        0 => return Err(Error::new(ErrorKind::Other, "Unused Object")),
+        1 => {
+            let flags = file.read_u8()?;
+            let mut reserved = [0u8; 6];
+            file.read_exact(&mut reserved)?;
+            let size = file.read_u64::<LittleEndian>()?;
+            let obj_header = ObjectHeader {
+                type_: ObjectType::ObjectData,
+                flags: flags,
+                reserved: reserved,
+                size: size,
+            };
+            let hash = file.read_u64::<LittleEndian>()?;
+            let next_hash_offset = file.read_u64::<LittleEndian>()?;
+            let next_field_offset = file.read_u64::<LittleEndian>()?;
+            let entry_offset = file.read_u64::<LittleEndian>()?;
+            let entry_array_offset = file.read_u64::<LittleEndian>()?;
+            let n_entries = file.read_u64::<LittleEndian>()?;
+            let mut payload: Vec<u8> = vec![0u8; (size - 64) as usize];
+            file.read_exact(&mut payload)?;
+
+            let data_object = DataObject {
+                object: obj_header,
+                hash: hash,
+                next_hash_offset: next_hash_offset,
+                next_field_offset: next_field_offset,
+                entry_offset: entry_offset,
+                entry_array_offset: entry_array_offset,
+                n_entries: n_entries,
+                payload: payload,
+            };
+            return Ok(Object::Data(data_object));
+        }
+        2 => {
+            let flags = file.read_u8()?;
+            let mut reserved = [0u8; 6];
+            file.read_exact(&mut reserved)?;
+            let size = file.read_u64::<LittleEndian>()?;
+            let object_header = ObjectHeader {
+                type_: ObjectType::ObjectField,
+                flags: flags,
+                reserved: reserved,
+                size: size,
+            };
+            let hash = file.read_u64::<LittleEndian>()?;
+            let next_hash_offset = file.read_u64::<LittleEndian>()?;
+            let head_data_offset = file.read_u64::<LittleEndian>()?;
+            let mut payload: Vec<u8> = vec![0u8; (size - 40) as usize];
+            file.read_exact(&mut payload)?;
+
+            let field_object = FieldObject {
+                object: object_header,
+                hash: hash,
+                next_hash_offset: next_hash_offset,
+                head_data_offset: head_data_offset,
+                payload: payload,
+            };
+            return Ok(Object::Field(field_object));
+        }
+        3 => {
+            let flags = file.read_u8()?;
+            let mut reserved = [0u8; 6];
+            file.read_exact(&mut reserved)?;
+            let size = file.read_u64::<LittleEndian>()?;
+            let object_header = ObjectHeader {
+                type_: ObjectType::ObjectEntry,
+                flags: flags,
+                reserved: reserved,
+                size: size,
+            };
+            let seqnum = file.read_u64::<LittleEndian>()?;
+            let realtime = file.read_u64::<LittleEndian>()?;
+            let monotonic = file.read_u64::<LittleEndian>()?;
+            let boot_id = file.read_u128::<LittleEndian>()?;
+            let xor_hash = file.read_u64::<LittleEndian>()?;
+            let mut items: Vec<EntryItem> =
+                Vec::with_capacity(((size - 48) / 16).try_into().unwrap());
+            for _ in 1..((size - 48) / 16) {
+                let object_offset = file.read_u64::<LittleEndian>()?;
+                let hash = file.read_u64::<LittleEndian>()?;
+                let saved_offset = file.seek(SeekFrom::Current(0))?;
+                let item_obj = get_obj_at_offset(file, object_offset)?;
+                file.seek(SeekFrom::Start(saved_offset))?;
+                let item = EntryItem {
+                    object_offset: object_offset,
+                    hash: hash,
+                    item: item_obj,
+                };
+                items.push(item);
+            }
+            let entry_object = EntryObject {
+                object: object_header,
+                seqnum: seqnum,
+                realtime: realtime,
+                monotonic: monotonic,
+                boot_id: boot_id,
+                xor_hash: xor_hash,
+                items: items,
+            };
+            return Ok(Object::Entry(entry_object));
+        }
+        4 => {
+            let flags = file.read_u8()?;
+            let mut reserved = [0u8; 6];
+            file.read_exact(&mut reserved)?;
+            let size = file.read_u64::<LittleEndian>()?;
+            let object_header = ObjectHeader {
+                type_: ObjectType::ObjectDataHashTable,
+                flags: flags,
+                reserved: reserved,
+                size: size,
+            };
+            let mut items: Vec<HashItem> =
+                Vec::with_capacity(((size - 48) / 16).try_into().unwrap());
+            for _ in 0..((size - 48) / 16) {
+                let hash_head_offset = file.read_u64::<LittleEndian>()?;
+                let tail_hash_offset = file.read_u64::<LittleEndian>()?;
+                let item = HashItem {
+                    hash_head_offset: hash_head_offset,
+                    tail_hash_offset: tail_hash_offset,
+                };
+                items.push(item);
+            }
+            let hash_table = HashTableObject {
+                object: object_header,
+                items: items,
+            };
+            return Ok(Object::HashTable(hash_table));
+        }
+        5 => {
+            let flags = file.read_u8()?;
+            let mut reserved = [0u8; 6];
+            file.read_exact(&mut reserved)?;
+            let size = file.read_u64::<LittleEndian>()?;
+            let object_header = ObjectHeader {
+                type_: ObjectType::ObjectFieldHashTable,
+                flags: flags,
+                reserved: reserved,
+                size: size,
+            };
+            let mut items: Vec<HashItem> =
+                Vec::with_capacity(((size - 48) / 16).try_into().unwrap());
+            for _ in 0..((size - 48) / 16) {
+                let hash_head_offset = file.read_u64::<LittleEndian>()?;
+                let tail_hash_offset = file.read_u64::<LittleEndian>()?;
+                let item = HashItem {
+                    hash_head_offset: hash_head_offset,
+                    tail_hash_offset: tail_hash_offset,
+                };
+                items.push(item);
+            }
+            let hash_table = HashTableObject {
+                object: object_header,
+                items: items,
+            };
+            return Ok(Object::HashTable(hash_table));
+        }
+        6 => {
+            let flags = file.read_u8()?;
+            let mut reserved = [0u8; 6];
+            file.read_exact(&mut reserved)?;
+            let size = file.read_u64::<LittleEndian>()?;
+            let object_header = ObjectHeader {
+                type_: ObjectType::ObjectEntryArray,
+                flags: flags,
+                reserved: reserved,
+                size: size,
+            };
+            let next_entry_array_offset = file.read_u64::<LittleEndian>()?;
+            let mut items: Vec<u64> = Vec::with_capacity(((size - 20) / 8).try_into().unwrap());
+            for _ in 0..((size - 20) / 8) {
+                let item = file.read_u64::<LittleEndian>()?;
+                if item == 0u64 {
+                    continue;
+                }
+                items.push(item);
+            }
+            let entry_array_object = EntryArrayObject {
+                object: object_header,
+                next_entry_array_offset: next_entry_array_offset,
+                items: items,
+            };
+            return Ok(Object::EntryArray(entry_array_object));
+        }
+        7 => {
+            let flags = file.read_u8()?;
+            let mut reserved = [0u8; 6];
+            file.read_exact(&mut reserved)?;
+            let size = file.read_u64::<LittleEndian>()?;
+            let object_header = ObjectHeader {
+                type_: ObjectType::ObjectTag,
+                flags: flags,
+                reserved: reserved,
+                size: size,
+            };
+            let seqnum = file.read_u64::<LittleEndian>()?;
+            let epoch = file.read_u64::<LittleEndian>()?;
+            let mut tag = [0u8; 256 / 8];
+            file.read_exact(&mut tag)?;
+            let tag_object = TagObject {
+                object: object_header,
+                seqnum: seqnum,
+                epoch: epoch,
+                tag: tag, /* SHA-256 HMAC */
+            };
+            return Ok(Object::Tag(tag_object));
+        }
+        _ => return Err(Error::new(ErrorKind::Other, "Unused MAX Object")),
+    }
+}
+
 #[derive(Debug, PartialEq)]
 pub enum JournalState {
     Offline,
@@ -44,6 +336,7 @@ impl fmt::Display for JournalState {
 }
 
 /// Represents all the possible types of objects in a journal file.
+#[derive(Debug, PartialEq)]
 pub enum Object {
     /// Holds data in the payload field
     Data(DataObject),
@@ -99,11 +392,19 @@ pub enum ObjectType {
 }
 
 /// The common object header for any object
+#[derive(Debug, PartialEq)]
 pub struct ObjectHeader {
     pub type_: ObjectType,
     pub flags: u8,
     pub reserved: [u8; 6],
     pub size: u64,
+}
+
+impl ObjectHeader {
+    // possible FIXME: is this accurate?
+    pub fn is_compressed(&self) -> bool {
+        self.flags & OBJECT_COMPRESSED_MASK != 0
+    }
 }
 
 impl SizedObject for ObjectHeader {
@@ -113,6 +414,7 @@ impl SizedObject for ObjectHeader {
 }
 
 /// Data objects have the actual data in the payload field
+#[derive(Debug, PartialEq)]
 pub struct DataObject {
     /// The object header
     pub object: ObjectHeader,
@@ -146,6 +448,7 @@ impl HashableObject for DataObject {
     }
 }
 
+#[derive(Debug, PartialEq)]
 pub struct FieldObject {
     pub object: ObjectHeader,
     pub hash: u64,
@@ -164,9 +467,11 @@ impl HashableObject for FieldObject {
 pub struct EntryItem {
     pub object_offset: u64,
     pub hash: u64,
+    pub item: Object,
 }
 
 /// Represents one log entry
+#[derive(Debug, PartialEq)]
 pub struct EntryObject {
     pub object: ObjectHeader,
     /// Sequence number of the entry
@@ -182,6 +487,20 @@ pub struct EntryObject {
     pub items: Vec<EntryItem>,
 }
 
+impl EntryObject {
+    pub fn get_data<T: Read + Seek>(&self, key: &str, buf: &mut T) -> Option<String> {
+        for item in self.items.iter() {
+            let obj = get_obj_at_offset(buf, item.object_offset).ok()?;
+            if let Object::Data(o) = obj {
+                if key.as_bytes() == &o.payload[..key.len()] {
+                    return Some(str::from_utf8(&o.payload[key.len()..]).unwrap().to_owned());
+                }
+            }
+        }
+        None
+    }
+}
+
 impl HashableObject for EntryObject {
     fn hash(&self) -> u64 {
         // TODO: use for_each here?
@@ -193,6 +512,7 @@ impl HashableObject for EntryObject {
     }
 }
 
+#[derive(Debug, PartialEq)]
 pub struct EntryArrayObject {
     pub object: ObjectHeader,
     pub next_entry_array_offset: u64,
@@ -200,16 +520,19 @@ pub struct EntryArrayObject {
     pub items: Vec<ObjectOffset>,
 }
 
+#[derive(Debug, PartialEq)]
 pub struct HashItem {
     pub hash_head_offset: u64,
     pub tail_hash_offset: u64,
 }
 
+#[derive(Debug, PartialEq)]
 pub struct HashTableObject {
     pub object: ObjectHeader,
     pub items: Vec<HashItem>,
 }
 
+#[derive(Debug, PartialEq)]
 pub struct TagObject {
     pub object: ObjectHeader,
     pub seqnum: u64,
@@ -256,8 +579,8 @@ pub struct JournalHeader {
 }
 
 impl JournalHeader {
-    pub fn new(file: &[u8]) -> Result<JournalHeader> {
-        let mut file = Cursor::new(file);
+    pub fn new<T: Read + Seek>(mut file: T) -> Result<JournalHeader> {
+        //let mut file = Cursor::new(file);
         let mut signature = [0u8; 8];
         file.read_exact(&mut signature)?;
         let compatible_flags = file.read_u32::<LittleEndian>()?;
