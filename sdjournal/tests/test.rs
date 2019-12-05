@@ -1,25 +1,20 @@
 #[cfg(test)]
 mod tests {
     use sdjournal::journal::*;
-    use memmap::Mmap;
     use std::fs::File;
     use pretty_assertions::assert_eq;
 
     #[test]
     fn test_journal_state_offline() {
         let file = File::open("tests/user-1000.journal").unwrap();
-        let mmap = unsafe { Mmap::map(&file).expect("mmap err") };
-        let buf = &*mmap;
-        let journal = Journal::from_bytes(buf).unwrap();
+        let journal = Journal::new(&file).unwrap();
         assert!(journal.header.state == JournalState::Offline);
     }
 
     #[test]
     fn test_header_parsing_user() {
         let file = File::open("tests/user-1000.journal").unwrap();
-        let mmap = unsafe { Mmap::map(&file).expect("mmap err") };
-        let buf = &*mmap;
-        let journal = Journal::from_bytes(buf).unwrap();
+        let journal = Journal::new(&file).unwrap();
         assert_eq!(journal.header.header_size, 240);
         assert_eq!(journal.header.state, JournalState::Offline);
         assert_eq!(journal.header.arena_size, 8388368);
@@ -33,9 +28,7 @@ mod tests {
     #[test]
     fn test_header_parsing_system() {
         let file = File::open("tests/system.journal").unwrap();
-        let mmap = unsafe { Mmap::map(&file).expect("mmap err") };
-        let buf = &*mmap;
-        let journal = Journal::from_bytes(buf).unwrap();
+        let journal = Journal::new(&file).unwrap();
         assert_eq!(journal.header.file_id, 0xf5c61067f7f64d32963ef8770ad232e6);
         assert_eq!(journal.header.machine_id, 0xc48110828c69477cb6be61e3601f532f);
         assert_eq!(journal.header.header_size, 240);
@@ -51,9 +44,7 @@ mod tests {
     #[test]
     fn test_compression_false() {
         let file = File::open("tests/user-1000.journal").unwrap();
-        let mmap = unsafe { Mmap::map(&file).expect("mmap err") };
-        let buf = &*mmap;
-        let journal = Journal::from_bytes(buf).unwrap();
+        let journal = Journal::new(&file).unwrap();
         let obj_iter = journal.iter_headers();
         for oh in obj_iter {
             assert!(!oh.is_compressed());
@@ -65,9 +56,7 @@ mod tests {
         use sdjournal::hash::rhash64;
 
         let file = File::open("tests/user-1000.journal").unwrap();
-        let mmap = unsafe { Mmap::map(&file).expect("mmap err") };
-        let buf = &*mmap;
-        let journal = Journal::from_bytes(buf).unwrap();
+        let journal = Journal::new(&file).unwrap();
         let obj_iter = journal.obj_iter();
         for obj in obj_iter {
             if let Object::Data(o) = obj {
@@ -80,9 +69,7 @@ mod tests {
     #[test]
     fn test_object_iter_user() {
         let file = File::open("tests/user-1000.journal").unwrap();
-        let mmap = unsafe { Mmap::map(&file).expect("mmap err") };
-        let buf = &*mmap;
-        let journal = Journal::from_bytes(buf).unwrap();
+        let journal = Journal::new(&file).unwrap();
         let expected = journal.header.n_objects;
         let mut counter = 0;
         let obj_iter = journal.obj_iter();
@@ -99,9 +86,7 @@ mod tests {
     #[test]
     fn test_iter_entries_user() {
         let file = File::open("tests/user-1000.journal").unwrap();
-        let mmap = unsafe { Mmap::map(&file).expect("mmap err") };
-        let buf = &*mmap;
-        let journal = Journal::from_bytes(buf).unwrap();
+        let journal = Journal::new(&file).unwrap();
         let expected = journal.header.n_entries;
         let mut counter = 0;
         let ent_iter = journal.iter_entries();
@@ -114,9 +99,7 @@ mod tests {
     #[test]
     fn test_multi_iter_user() {
         let file = File::open("tests/user-1000.journal").unwrap();
-        let mmap = unsafe { Mmap::map(&file).expect("mmap err") };
-        let buf = &*mmap;
-        let journal = Journal::from_bytes(buf).unwrap();
+        let journal = Journal::new(&file).unwrap();
         let hdr_iter = journal.iter_headers();
         for oh in hdr_iter {
             if oh.type_ == ObjectType::ObjectData {
@@ -134,16 +117,11 @@ mod tests {
     #[test]
     fn test_object_iter_headers_user() {
         let file = File::open("tests/user-1000.journal").unwrap();
-        let mmap = unsafe { Mmap::map(&file).expect("mmap err") };
-        let buf = &*mmap;
-        let journal = Journal::from_bytes(buf).unwrap();
+        let journal = Journal::new(&file).unwrap();
         let expected = journal.header.n_objects;
         let obj_iter = journal.iter_headers();
         let mut counter = 0;
-        for oh in obj_iter {
-            if oh.type_ == ObjectType::ObjectData {
-                println!("type: {:?} size: {}", oh.type_, oh.size);
-            }
+        for _oh in obj_iter {
             counter += 1;
         }
         assert_eq!(counter, expected);
@@ -152,9 +130,7 @@ mod tests {
     #[test]
     fn test_object_iter_headers_system() {
         let file = File::open("tests/system.journal").unwrap();
-        let mmap = unsafe { Mmap::map(&file).expect("mmap err") };
-        let buf = &*mmap;
-        let journal = Journal::from_bytes(buf).unwrap();
+        let journal = Journal::new(&file).unwrap();
         let expected = journal.header.n_objects;
         let obj_iter = journal.iter_headers();
         let mut counter = 0;
@@ -170,9 +146,7 @@ mod tests {
     #[test]
     fn test_object_iter_system() {
         let file = File::open("tests/system.journal").unwrap();
-        let mmap = unsafe { Mmap::map(&file).expect("mmap err") };
-        let buf = &*mmap;
-        let journal = Journal::from_bytes(buf).unwrap();
+        let journal = Journal::new(&file).unwrap();
         let expected = journal.header.n_objects;
         let mut counter = 0;
         let obj_iter = journal.obj_iter();
@@ -185,9 +159,7 @@ mod tests {
     #[test]
     fn test_iter_entries_system() {
         let file = File::open("tests/system.journal").unwrap();
-        let mmap = unsafe { Mmap::map(&file).expect("mmap err") };
-        let buf = &*mmap;
-        let journal = Journal::from_bytes(buf).unwrap();
+        let journal = Journal::new(&file).unwrap();
         let expected = journal.header.n_entries;
         let mut counter = 0;
         let ent_iter = journal.iter_entries();
@@ -200,9 +172,7 @@ mod tests {
     #[test]
     fn test_entry_array_iter_user() {
         let file = File::open("tests/user-1000.journal").unwrap();
-        let mmap = unsafe { Mmap::map(&file).expect("mmap err") };
-        let buf = &*mmap;
-        let journal = Journal::from_bytes(buf).unwrap();
+        let journal = Journal::new(&file).unwrap();
         let expected = journal.header.n_entries;
         let mut counter = 0;
         let ent_iter = journal.ea_iter();
@@ -217,14 +187,12 @@ mod tests {
     #[test]
     fn test_data_object_is_trusted() {
         let file = File::open("tests/user-1000.journal").unwrap();
-        let mmap = unsafe { Mmap::map(&file).expect("mmap err") };
-        let buf = &*mmap;
-        let journal = Journal::from_bytes(buf).unwrap();
+        let journal = Journal::new(&file).unwrap();
 
         let ent_iter = journal.iter_entries();
         for ent in ent_iter {
             for obj in ent.items {
-                let data = match get_obj_at_offset(buf, obj.object_offset).unwrap() {
+                let data = match obj.item {
                     Object::Data(d) => d,
                     _ => continue,
                 };
@@ -241,9 +209,7 @@ mod tests {
         use sdjournal::traits::HashableObject;
 
         let file = File::open("tests/user-1000.journal").unwrap();
-        let mmap = unsafe { Mmap::map(&file).expect("mmap err") };
-        let buf = &*mmap;
-        let journal = Journal::from_bytes(buf).unwrap();
+        let journal = Journal::new(&file).unwrap();
 
         for obj in journal.obj_iter() {
             if let Object::Data(d) = obj {
@@ -259,9 +225,7 @@ mod tests {
         use sdjournal::traits::HashableObject;
 
         let file = File::open("tests/user-1000.journal").unwrap();
-        let mmap = unsafe { Mmap::map(&file).expect("mmap err") };
-        let buf = &*mmap;
-        let journal = Journal::from_bytes(buf).unwrap();
+        let journal = Journal::new(&file).unwrap();
 
         for obj in journal.obj_iter() {
             if let Object::Field(f) = obj {
@@ -277,9 +241,7 @@ mod tests {
         use sdjournal::traits::HashableObject;
 
         let file = File::open("tests/system.journal").unwrap();
-        let mmap = unsafe { Mmap::map(&file).expect("mmap err") };
-        let buf = &*mmap;
-        let journal = Journal::from_bytes(buf).unwrap();
+        let journal = Journal::new(&file).unwrap();
 
         for obj in journal.obj_iter() {
             if let Object::Field(f) = obj {
@@ -298,9 +260,7 @@ mod tests {
         use sdjournal::traits::HashableObject;
 
         let file = File::open("tests/user-1000.journal").unwrap();
-        let mmap = unsafe { Mmap::map(&file).expect("mmap err") };
-        let buf = &*mmap;
-        let journal = Journal::from_bytes(buf).unwrap();
+        let journal = Journal::new(&file).unwrap();
 
         for entry in journal.iter_entries() {
             let stored_hash = entry.xor_hash;
@@ -312,9 +272,7 @@ mod tests {
     #[test]
     fn test_journal_verify_user() {
         let file = File::open("tests/user-1000.journal").unwrap();
-        let mmap = unsafe { Mmap::map(&file).expect("mmap err") };
-        let buf = &*mmap;
-        let journal = Journal::from_bytes(buf).unwrap();
+        let journal = Journal::new(&file).unwrap();
 
         assert_eq!(journal.verify(), true);
     }
@@ -322,9 +280,7 @@ mod tests {
     #[test]
     fn test_journal_verify_system() {
         let file = File::open("tests/system.journal").unwrap();
-        let mmap = unsafe { Mmap::map(&file).expect("mmap err") };
-        let buf = &*mmap;
-        let journal = Journal::from_bytes(buf).unwrap();
+        let journal = Journal::new(&file).unwrap();
 
         assert_eq!(journal.verify(), true);
     }
