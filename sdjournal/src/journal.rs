@@ -1,7 +1,6 @@
 use byteorder::{BigEndian, LittleEndian, ReadBytesExt};
 use std::fmt;
 use std::str;
-use std::io::Cursor;
 use std::io::{Error, ErrorKind, Read, Result, Seek, SeekFrom};
 use std::convert::TryInto;
 
@@ -37,20 +36,67 @@ pub(crate) fn align64(u: u64) -> u64 {
     (u + 7u64) & !7u64
 }
 
-pub struct Journal<'a> {
-    pub file: &'a [u8],
+pub struct Journal<'a, T>
+where
+    &'a T: Read + Seek,
+{
+    pub file: &'a T,
     pub header: JournalHeader,
 }
 
-impl ObjectHeader {
-    // possible FIXME: is this accurate?
-    pub fn is_compressed(&self) -> bool {
-        self.flags & OBJECT_COMPRESSED_MASK != 0
+impl<'a, T> Journal<'a, T>
+where
+    &'a T: Read + Seek,
+{
+    pub fn new(bytes: &'a T) -> Result<Journal<'a, T>> {
+        let header = JournalHeader::new(bytes)?;
+
+        Ok(Journal {
+            file: bytes,
+            header: header,
+        })
+    }
+
+    pub fn obj_iter(&self) -> ObjectIter<'a, T> {
+        let start = self.header.field_hash_table_offset - OBJECT_HEADER_SZ;
+        ObjectIter::new(self.file, start)
+    }
+
+    /// Iterate over all header objects in journal
+    pub fn iter_headers(&self) -> ObjectHeaderIter<'a, T> {
+        let start = self.header.field_hash_table_offset - OBJECT_HEADER_SZ;
+        ObjectHeaderIter::new(self.file, start)
+    }
+
+    /// Iterate over all entry objects in the journal
+    pub fn iter_entries(&self) -> EntryIter<'a, T> {
+        let start = self.header.entry_array_offset;
+        let n_objects = self.header.n_objects;
+        EntryIter::new(self.file, start, n_objects)
+    }
+
+    pub fn ea_iter(&self) -> EntryArrayIter<'a, T> {
+        let start = self.header.entry_array_offset;
+        EntryArrayIter::new(self.file, start)
+    }
+
+    // TODO: add more tests in verify
+    pub fn verify(&self) -> bool {
+        for obj in self.obj_iter() {
+            if let Object::Data(d) = obj {
+                let stored_hash = d.hash;
+                let calc_hash = d.hash();
+                if stored_hash != calc_hash {
+                    return false;
+                }
+            }
+        }
+        true
     }
 }
 
-pub fn get_obj_at_offset(file: &[u8], offset: u64) -> Result<Object> {
-    let mut file = Cursor::new(file);
+pub fn get_obj_at_offset<T: Read + Seek>(file: &mut T, offset: u64) -> Result<Object> {
+    //let mut file = Cursor::new(file);
 
     if !is_valid64(offset) {
         return Err(Error::new(ErrorKind::Other, "Invalid offset"));
@@ -139,9 +185,13 @@ pub fn get_obj_at_offset(file: &[u8], offset: u64) -> Result<Object> {
             for _ in 1..((size - 48) / 16) {
                 let object_offset = file.read_u64::<LittleEndian>()?;
                 let hash = file.read_u64::<LittleEndian>()?;
+                let saved_offset = file.seek(SeekFrom::Current(0))?;
+                let item_obj = get_obj_at_offset(file, object_offset)?;
+                file.seek(SeekFrom::Start(saved_offset))?;
                 let item = EntryItem {
                     object_offset: object_offset,
                     hash: hash,
+                    item: item_obj,
                 };
                 items.push(item);
             }
@@ -266,68 +316,6 @@ pub fn get_obj_at_offset(file: &[u8], offset: u64) -> Result<Object> {
     }
 }
 
-impl<'a> Journal<'a> {
-    pub fn from_bytes(mut bytes: &'a [u8]) -> Result<Journal<'a>> {
-        let header = JournalHeader::new(&mut bytes)?;
-
-        Ok(Journal {
-            file: bytes,
-            header: header,
-        })
-    }
-
-    /// Iterate over all header objects in journal
-    pub fn iter_headers<'b>(&'b self) -> ObjectHeaderIter<'b> {
-        let start = self.header.field_hash_table_offset - OBJECT_HEADER_SZ;
-        ObjectHeaderIter::new(self.file, start)
-    }
-
-    pub fn obj_iter<'b>(&'b self) -> ObjectIter<'b> {
-        let start = self.header.field_hash_table_offset - OBJECT_HEADER_SZ;
-        ObjectIter::new(self.file, start)
-    }
-
-    /// Iterate over all entry objects in the journal
-    pub fn iter_entries<'b>(&'b self) -> EntryIter<'b> {
-        let start = self.header.entry_array_offset;
-        let n_objects = self.header.n_objects;
-        EntryIter::new(self.file, start, n_objects)
-    }
-
-    pub fn ea_iter<'b>(&'b self) -> EntryArrayIter<'b> {
-        let start = self.header.entry_array_offset;
-        EntryArrayIter::new(self.file, start)
-    }
-
-    // TODO: add more tests in verify
-    pub fn verify(&self) -> bool {
-        for obj in self.obj_iter() {
-            if let Object::Data(d) = obj {
-                let stored_hash = d.hash;
-                let calc_hash = d.hash();
-                if stored_hash != calc_hash {
-                    return false;
-                }
-            }
-        }
-        true
-    }
-}
-
-impl EntryObject {
-    pub fn get_data(&self, key: &str, buf: &[u8]) -> Option<String> {
-        for item in self.items.iter() {
-            let obj = get_obj_at_offset(buf, item.object_offset).unwrap();
-            if let Object::Data(o) = obj {
-                if key.as_bytes() == &o.payload[..key.len()] {
-                    return Some(str::from_utf8(&o.payload[key.len()..]).unwrap().to_owned());
-                }
-            }
-        }
-        None
-    }
-}
-
 #[derive(Debug, PartialEq)]
 pub enum JournalState {
     Offline,
@@ -348,6 +336,7 @@ impl fmt::Display for JournalState {
 }
 
 /// Represents all the possible types of objects in a journal file.
+#[derive(Debug, PartialEq)]
 pub enum Object {
     /// Holds data in the payload field
     Data(DataObject),
@@ -403,11 +392,19 @@ pub enum ObjectType {
 }
 
 /// The common object header for any object
+#[derive(Debug, PartialEq)]
 pub struct ObjectHeader {
     pub type_: ObjectType,
     pub flags: u8,
     pub reserved: [u8; 6],
     pub size: u64,
+}
+
+impl ObjectHeader {
+    // possible FIXME: is this accurate?
+    pub fn is_compressed(&self) -> bool {
+        self.flags & OBJECT_COMPRESSED_MASK != 0
+    }
 }
 
 impl SizedObject for ObjectHeader {
@@ -417,6 +414,7 @@ impl SizedObject for ObjectHeader {
 }
 
 /// Data objects have the actual data in the payload field
+#[derive(Debug, PartialEq)]
 pub struct DataObject {
     /// The object header
     pub object: ObjectHeader,
@@ -450,6 +448,7 @@ impl HashableObject for DataObject {
     }
 }
 
+#[derive(Debug, PartialEq)]
 pub struct FieldObject {
     pub object: ObjectHeader,
     pub hash: u64,
@@ -468,9 +467,11 @@ impl HashableObject for FieldObject {
 pub struct EntryItem {
     pub object_offset: u64,
     pub hash: u64,
+    pub item: Object,
 }
 
 /// Represents one log entry
+#[derive(Debug, PartialEq)]
 pub struct EntryObject {
     pub object: ObjectHeader,
     /// Sequence number of the entry
@@ -486,6 +487,20 @@ pub struct EntryObject {
     pub items: Vec<EntryItem>,
 }
 
+impl EntryObject {
+    pub fn get_data<T: Read + Seek>(&self, key: &str, buf: &mut T) -> Option<String> {
+        for item in self.items.iter() {
+            let obj = get_obj_at_offset(buf, item.object_offset).ok()?;
+            if let Object::Data(o) = obj {
+                if key.as_bytes() == &o.payload[..key.len()] {
+                    return Some(str::from_utf8(&o.payload[key.len()..]).unwrap().to_owned());
+                }
+            }
+        }
+        None
+    }
+}
+
 impl HashableObject for EntryObject {
     fn hash(&self) -> u64 {
         // TODO: use for_each here?
@@ -497,6 +512,7 @@ impl HashableObject for EntryObject {
     }
 }
 
+#[derive(Debug, PartialEq)]
 pub struct EntryArrayObject {
     pub object: ObjectHeader,
     pub next_entry_array_offset: u64,
@@ -504,16 +520,19 @@ pub struct EntryArrayObject {
     pub items: Vec<ObjectOffset>,
 }
 
+#[derive(Debug, PartialEq)]
 pub struct HashItem {
     pub hash_head_offset: u64,
     pub tail_hash_offset: u64,
 }
 
+#[derive(Debug, PartialEq)]
 pub struct HashTableObject {
     pub object: ObjectHeader,
     pub items: Vec<HashItem>,
 }
 
+#[derive(Debug, PartialEq)]
 pub struct TagObject {
     pub object: ObjectHeader,
     pub seqnum: u64,
@@ -560,8 +579,8 @@ pub struct JournalHeader {
 }
 
 impl JournalHeader {
-    pub fn new(file: &[u8]) -> Result<JournalHeader> {
-        let mut file = Cursor::new(file);
+    pub fn new<T: Read + Seek>(mut file: T) -> Result<JournalHeader> {
+        //let mut file = Cursor::new(file);
         let mut signature = [0u8; 8];
         file.read_exact(&mut signature)?;
         let compatible_flags = file.read_u32::<LittleEndian>()?;
